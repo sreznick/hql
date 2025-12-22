@@ -8,9 +8,10 @@ plugins {
 }
 
 dependencies {
-    implementation 'org.antlr:antlr4-runtime:4.13.2'
+    implementation libs.antlr4.runtime
+    implementation libs.netbeans.profiler
 
-    antlr "org.antlr:antlr4:4.13.2" // use ANTLR version 4
+    antlr libs.antlr4 // use ANTLR version 4
 }
 
 
