@@ -8,5 +8,5 @@ dependencies {
 }
 
 application {
-    mainClass = 'org.hql.cli.AppKt'
+    mainClass = 'org.hql.hqcli.AppKt'
 }
