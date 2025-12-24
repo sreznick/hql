@@ -8,7 +8,7 @@ import org.hql.ExprParser
 // Структура для фильтров
 sealed class FilterExpr {
     // Лист дерева: конкретное сравнение
-    data class Comparison(val field: String, val operator: String, val value: Any) : FilterExpr()
+    data class Comparison(val field: String, val operator: String, val value: String) : FilterExpr()
 
     // Узлы дерева: логика
     data class And(val left: FilterExpr, val right: FilterExpr) : FilterExpr()
@@ -100,10 +100,7 @@ data class QueryAST(
                     val valueCtx = condCtx.literal()
                     val rawValue = valueCtx.text
 
-                    val parsedValue: Any = when {
-                        valueCtx.INT_LITERAL() != null -> rawValue.toInt()
-                        else -> rawValue.trim('\'') // Удаляем кавычки у строк
-                    }
+                    val parsedValue = rawValue.trim('\'') // Удаляем кавычки у строк
 
                     FilterExpr.Comparison(fieldName, operator, parsedValue)
                 }

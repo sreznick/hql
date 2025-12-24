@@ -1,14 +1,25 @@
 package org.hql.hqcli
 
+import org.hql.hprof.heap.Heap
+import org.hql.query.Database
 import org.hql.query.ast.FilterExpr
 import org.hql.query.ast.QueryAST
 
 fun main(args: Array<String>) {
+    if (args.isEmpty()) {
+        println("Error: please specify the path to hprof file as first argument")
+        return
+    }
+    val path = args[0]
+
     // Если передали аргументы запускаем их, если нет — запускаем микротесты
-    val queries = if (args.isNotEmpty()) {
-        listOf(args.joinToString(" "))
+    val queries = if (args.size > 1) {
+        listOf(args.drop(1).joinToString(" "))
     } else {
         listOf(
+            // Тест 0: Вывести таблицу
+            "SELECT * FROM User",
+
             // Тест 1: Обычный запрос
             "SELECT name, age FROM User WHERE age > 18 AND active = 'true' LIMIT 10",
 
@@ -18,11 +29,13 @@ fun main(args: Array<String>) {
 
             // Тест 3: Скобки меняют приоритет
             // Ожидаем: (age > 18 ИЛИ city = 'Msk') И active = 'true'
-            "SELECT id FROM User WHERE (age > 18 OR city = 'Msk') AND active = 'true'"
+            "SELECT * FROM User WHERE (age > 18 OR city = 'Msk') AND active = 'true'"
         )
     }
 
     println("Running HQL CLI...\n")
+    val heap = Heap(path)
+    val db = Database(heap)
 
     for ((i, query) in queries.withIndex()) {
         println("=== QUERY #${i + 1} ===")
@@ -45,6 +58,12 @@ fun main(args: Array<String>) {
                 println("    (No filter)")
             }
 
+            println("-".repeat(40) + "\n")
+            println("Query results:")
+            db.query(ast.targetClassName, ast.columns,
+                filter = ast.filter,
+                limit = ast.limit
+            )
         } catch (e: Exception) {
             println("ERROR parsing query: ${e.message}")
             e.printStackTrace()

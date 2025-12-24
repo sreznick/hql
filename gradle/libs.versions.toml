@@ -4,10 +4,8 @@
 [versions]
 kotlin-gradle-plugin = "2.1.20"
 antlr = "4.13.2"
-netbeans-profiler = "RELEASE280"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin-gradle-plugin" }
 antlr4-runtime = { module = "org.antlr:antlr4-runtime", version.ref = "antlr" }
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
-netbeans-profiler = { module = "org.netbeans.modules:org-netbeans-lib-profiler", version.ref = "netbeans-profiler" }
