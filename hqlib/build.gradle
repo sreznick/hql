@@ -9,7 +9,6 @@ plugins {
 
 dependencies {
     implementation libs.antlr4.runtime
-    implementation libs.kotlin.reflect
 
     antlr libs.antlr4 // use ANTLR version 4
 }
