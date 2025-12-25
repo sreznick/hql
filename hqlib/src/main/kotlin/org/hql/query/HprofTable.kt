@@ -1,67 +1,22 @@
 package org.hql.query
 
-import org.hql.hprof.heap.BasicType
 import org.hql.hprof.heap.Class
 import org.hql.hprof.heap.Heap
 import org.hql.hprof.heap.Instance
-import org.hql.query.ast.FilterExpr
+import org.hql.query.expressions.Expression
+import kotlin.collections.toByteArray
 import kotlin.math.max
 
 private fun repr(value: Any?): String {
     if (value == null) return "null"
-    if (value is Instance && value.getType() == "java.lang.String") {
-        val content = (value["value"] as List<Byte>).toByteArray().toString(Charsets.UTF_8)
+    if (value is List<*> && value.isNotEmpty() && value[0] is Byte) {
+        val content = (value as List<Byte>).toByteArray().toString(Charsets.UTF_8)
         return "\"$content\""
     }
-    return value.toString()
-}
-
-private fun <T: Comparable<T>> comparator(
-    filter: FilterExpr.Comparison,
-    literalParser: (String) -> T?
-): (Instance) -> Boolean {
-    val const = literalParser(filter.value)
-        ?: throw RuntimeException("field of type is not comparable to constant ${filter.value}")
-    return when (filter.operator) {
-        "=" -> { instance ->
-            (instance[filter.field] as T) == const
-        }
-        "!=" -> { instance ->
-            (instance[filter.field] as T) != const
-        }
-        "<" -> { instance ->
-            (instance[filter.field] as T) < const
-        }
-        "<=" -> { instance ->
-            (instance[filter.field] as T) <= const
-        }
-        ">" -> { instance ->
-            (instance[filter.field] as T) > const
-        }
-        ">=" -> { instance ->
-            (instance[filter.field] as T) >= const
-        }
-        else -> throw RuntimeException("invalid operator: ${filter.operator}")
-    }
-}
-
-private fun genericComparator(
-    filter: FilterExpr.Comparison
-): (Instance) -> Boolean = { instance ->
-    val value = instance[filter.field]
     if (value is Instance && value.getType() == "java.lang.String") {
-        val content = (value["value"] as List<Byte>).toByteArray().toString(Charsets.UTF_8)
-        when (filter.operator) {
-            "=" -> content == filter.value
-            "!=" -> content != filter.value
-            "<" -> content < filter.value
-            "<=" -> content <= filter.value
-            ">" -> content > filter.value
-            ">=" -> content >= filter.value
-            else -> throw RuntimeException("invalid operator: ${filter.operator}")
-        }
-    } else
-        throw RuntimeException("comparing objects of type ${filter.field} is not supported")
+        return repr(value["value"])
+    }
+    return value.toString()
 }
 
 class HprofTable(private val heap: Heap, className: String) {
@@ -79,47 +34,10 @@ class HprofTable(private val heap: Heap, className: String) {
         instances = cls.getInstances()
     }
 
-    private fun constructFilter(filter: FilterExpr): (Instance) -> Boolean {
-        when (filter) {
-            is FilterExpr.Comparison -> {
-                val field = cls.getInstanceFieldTypes().firstNotNullOfOrNull { (k, v) ->
-                    if (k == filter.field) k to v else null
-                } ?: throw RuntimeException("no such field: ${filter.field}")
-
-                val type = field.second
-                return when (type) {
-                    BasicType.INT -> comparator(filter) { it.toIntOrNull() }
-                    BasicType.SHORT -> comparator(filter) { it.toShortOrNull() }
-                    BasicType.BYTE -> comparator(filter) { it.toByteOrNull() }
-                    BasicType.CHAR -> comparator(filter) { it.toUByteOrNull() }
-                    BasicType.LONG -> comparator(filter) { it.toLongOrNull() }
-                    BasicType.FLOAT -> comparator(filter) { it.toFloatOrNull() }
-                    BasicType.DOUBLE -> comparator(filter) { it.toDoubleOrNull() }
-                    BasicType.BOOLEAN -> comparator(filter) { it.toBooleanStrictOrNull() }
-                    BasicType.OBJECT -> genericComparator(filter)
-                }
-            }
-            is FilterExpr.And -> {
-                val left = constructFilter(filter.left)
-                val right = constructFilter(filter.right)
-                return { instance -> left(instance) && right(instance) }
-            }
-            is FilterExpr.Or -> {
-                val left = constructFilter(filter.left)
-                val right = constructFilter(filter.right)
-                return { instance -> left(instance) || right(instance) }
-            }
-        }
-    }
-
-    private fun printTable(columns: List<String>, instances: List<Instance>) {
+    private fun printTable(columns: List<String>, values: List<List<String>>) {
         val cols = columns.size
-        val rows = instances.size
-        val values = columns.map { field ->
-            instances.map { instance ->
-                repr(instance[field])
-            }
-        }
+        if (cols == 0) return
+        val rows = values[0].size
         val lengths = (0..<cols).map { i ->
             max(values[i].maxOf { it.length}, columns[i].length)
         }
@@ -141,14 +59,26 @@ class HprofTable(private val heap: Heap, className: String) {
         }
     }
 
-    fun select(columns: List<String>, filter: FilterExpr?, limit: Int) {
-        val columns_ = columns.ifEmpty { fieldNames.toList() }
+    fun select(columns: List<Expression>, columnsAsText: List<String>, filter: Expression?, limit: Int) {
+        val columns_ = columns.ifEmpty { fieldNames.map { Expression.Field(it) } }
+        val columnsAsText_ = columnsAsText.ifEmpty { fieldNames.toList() }
 
-        val filterF = if (filter != null) constructFilter(filter) else { _ -> true }
+        val filterF: (Instance) -> Boolean = if (filter != null)
+            { instance ->
+                val result = filter.eval(instance)
+                if (result !is Boolean)
+                    throw RuntimeException("result of a filter expression should be boolean")
+                result
+            } else { _ -> true }
 
         val filteredInstances = instances
             .filter(filterF)
             .take(limit)
-        printTable(columns_, filteredInstances)
+        val values = columns_.map { column ->
+            filteredInstances.map { instance ->
+                repr(column.eval(instance))
+            }
+        }
+        printTable(columnsAsText_, values)
     }
 }

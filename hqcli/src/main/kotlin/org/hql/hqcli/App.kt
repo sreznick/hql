@@ -37,10 +37,7 @@ fun main(args: Array<String>) {
 
             println("-".repeat(40) + "\n")
             println("Query results:")
-            db.query(ast.targetClassName, ast.columns,
-                filter = ast.filter,
-                limit = ast.limit
-            )
+            db.query(query)
         } catch (e: Exception) {
             println("ERROR parsing query: ${e.message}")
             e.printStackTrace()
