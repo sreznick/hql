@@ -4,20 +4,7 @@ import org.hql.hprof.heap.Class
 import org.hql.hprof.heap.Heap
 import org.hql.hprof.heap.Instance
 import org.hql.query.expressions.Expression
-import kotlin.collections.toByteArray
 import kotlin.math.max
-
-private fun repr(value: Any?): String {
-    if (value == null) return "null"
-    if (value is List<*> && value.isNotEmpty() && value[0] is Byte) {
-        val content = (value as List<Byte>).toByteArray().toString(Charsets.UTF_8)
-        return "\"$content\""
-    }
-    if (value is Instance && value.getType() == "java.lang.String") {
-        return repr(value["value"])
-    }
-    return value.toString()
-}
 
 class HprofTable(private val heap: Heap, className: String) {
     private val cls: Class
@@ -36,10 +23,10 @@ class HprofTable(private val heap: Heap, className: String) {
 
     private fun printTable(columns: List<String>, values: List<List<String>>) {
         val cols = columns.size
-        if (cols == 0) return
         val rows = values[0].size
+        if (cols == 0 || rows == 0) return
         val lengths = (0..<cols).map { i ->
-            max(values[i].maxOf { it.length}, columns[i].length)
+            max(values[i].maxOf { it.length }, columns[i].length)
         }
         var i = 0
         while (i < cols) {
@@ -59,24 +46,48 @@ class HprofTable(private val heap: Heap, className: String) {
         }
     }
 
-    fun select(columns: List<Expression>, columnsAsText: List<String>, filter: Expression?, limit: Int) {
+    fun select(
+        columns: List<Expression>,
+        columnNames: List<String>,
+        filter: Expression? = null,
+        sort: Expression? = null,
+        sortDescending: Boolean = false,
+        limit: Int? = null,
+        offset: Int? = null
+    ) {
         val columns_ = columns.ifEmpty { fieldNames.map { Expression.Field(it) } }
-        val columnsAsText_ = columnsAsText.ifEmpty { fieldNames.toList() }
+        val columnsAsText_ = columnNames.ifEmpty { fieldNames.toList() }
 
-        val filterF: (Instance) -> Boolean = if (filter != null)
-            { instance ->
+        var processedInstances = instances
+        filter?.let {
+            processedInstances = processedInstances.filter { instance ->
                 val result = filter.eval(instance)
                 if (result !is Boolean)
                     throw RuntimeException("result of a filter expression should be boolean")
                 result
-            } else { _ -> true }
+            }
+        }
+        sort?.let {
+            val selector: (Instance) -> Comparable<Any?> = { instance ->
+                val result = sort.eval(instance)
+                val comparable = result as? Comparable<Any?>
+                    ?: throw RuntimeException("result (type ${if (result == null) null else result::class.simpleName}) is not comparable")
+                comparable
+            }
+            processedInstances =
+                if (sortDescending) processedInstances.sortedByDescending(selector)
+                else                processedInstances.sortedBy(selector)
+        }
+        offset?.let {
+            processedInstances = processedInstances.drop(offset)
+        }
+        limit?.let {
+            processedInstances = processedInstances.take(limit)
+        }
 
-        val filteredInstances = instances
-            .filter(filterF)
-            .take(limit)
         val values = columns_.map { column ->
-            filteredInstances.map { instance ->
-                repr(column.eval(instance))
+            processedInstances.map { instance ->
+                column.eval(instance).toString()
             }
         }
         printTable(columnsAsText_, values)

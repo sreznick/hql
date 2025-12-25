@@ -8,11 +8,19 @@ import kotlin.collections.forEach
 class Heap(path: String) {
     val format: String
     val timestamp: Long
+    val reader: HprofReader
 
     private val classes: Map<String, Class>
     private val instances: Map<Identifier, Instance>
 
-    fun dfs(
+    private fun createInstance(id: Identifier, i: InstanceInternal): Instance {
+        val className = reader.strings[reader.classNames[i.classId]!!]!!.replace("/", ".")
+        if (className == "java.lang.String")
+            return StringInstance(id)
+        return Instance(id)
+    }
+
+    private fun dfs(
         objects: MutableMap<Identifier, Any>,
         instances: MutableMap<Identifier, Any>,
         id: Identifier
@@ -24,7 +32,7 @@ class Heap(path: String) {
             return objects[id]!!
         val x = instances[id]!!
         if (x is InstanceInternal) {
-            val inst = Instance(id)
+            val inst = createInstance(id, x)
             objects[id] = inst
             return inst
         }
@@ -43,7 +51,10 @@ class Heap(path: String) {
         throw RuntimeException("shouldn't be here")
     }
 
-    fun fillInstances(objects: MutableMap<Identifier, Any>, instances: MutableMap<Identifier, Any>) {
+    private fun fillInstances(
+        objects: MutableMap<Identifier, Any>,
+        instances: MutableMap<Identifier, Any>
+    ) {
         instances.forEach { (id, _) ->
             dfs(objects, instances, id)
         }
@@ -51,7 +62,7 @@ class Heap(path: String) {
 
     init {
         val stream = File(path).inputStream()
-        val reader = HprofReader(stream)
+        reader = HprofReader(stream)
         stream.close()
 
         format = reader.format

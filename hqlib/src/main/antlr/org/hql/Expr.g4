@@ -7,15 +7,25 @@ root : selectQuery EOF ;
 
 // Правило для SELECT: ключевое слово + какие столбцы + ключевое слово + имя класса
 // + опциональные условия where и limit
-selectQuery : SELECT columns FROM target=className whereClause? limitClause? ;
+selectQuery : SELECT columns FROM target=className additionalClause*;
 
 columns : STAR | columnList;
 
-columnList : expression (',' expression)* ;
+columnList : column (',' column)* ;
+
+column : expression (AS name=IDENTIFIER)? ;
 
 className : IDENTIFIER ('.' IDENTIFIER)* ;
 
+additionalClause: whereClause | limitClause | offsetClause | orderClause;
+
 whereClause : WHERE expression ;
+
+limitClause : LIMIT count=INT_LITERAL ;
+
+offsetClause : OFFSET count=INT_LITERAL ;
+
+orderClause : ORDER_BY key=expression (ASC | DESC)? ;
 
 expression
     : left=expression op=ACCESS right=IDENTIFIER     # AccessExpr
@@ -38,9 +48,6 @@ expression
 // Список поддерживаемых операторов
 operator : OP_EQ | OP_GT | OP_LT | OP_GE | OP_LE | OP_NEQ ;
 
-// Новое правило для LIMIT
-limitClause : LIMIT count=INT_LITERAL ;
-
 
 // === ПРАВИЛА ЛЕКСЕРА (Слова) ===
 
@@ -48,6 +55,11 @@ SELECT : 'SELECT' | 'select' ;
 FROM   : 'FROM'   | 'from' ;
 WHERE  : 'WHERE'  | 'where' ;
 LIMIT  : 'LIMIT'  | 'limit' ;
+AS     : 'AS'     | 'as' ;
+OFFSET : 'OFFSET' | 'offset' ;
+ORDER_BY : 'ORDER BY' | 'order by' ;
+ASC    : 'ASC'    | 'asc' ;
+DESC   : 'DESC'   | 'desc' ;
 
 PLUS : '+';
 MINUS : '-';

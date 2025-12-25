@@ -59,10 +59,13 @@ private fun printTree(expr: Expression, indent: String) {
 
 data class QueryAST(
     val targetClassName: String,
-    val filter: Expression? = null,
-    val limit: Int? = null,
     val columns: List<Expression> = emptyList(),
-    val columnsAsText: List<String> = emptyList()
+    val columnNames: List<String> = emptyList(),
+    val filter: Expression? = null,
+    val sort: Expression? = null,
+    val sortDescending: Boolean = false,
+    val limit: Int? = null,
+    val offset: Int? = null
 ) {
     fun print() {
         println(" -> Target Class: $targetClassName")
@@ -74,6 +77,7 @@ data class QueryAST(
             columns.forEach { printTree(it, indent = "    ") }
         }
         println(" -> Limit:        ${limit ?: "All"}")
+        println(" -> Order:        ${sort ?: "None"}")
         println(" -> Logic Tree:")
 
         // Проверка
@@ -100,38 +104,52 @@ data class QueryAST(
 
             // 2. Обработка колонок (раз уж ты добавил их в грамматику)
             val columnsList = mutableListOf<Expression>()
-            val columnsAsText = mutableListOf<String>()
+            val columnNames = mutableListOf<String>()
             val columnsCtx = selectCtx.columns()
             if (columnsCtx.STAR() == null) {
                 // Если не звездочка, собираем список имен
-                columnsCtx.columnList()?.expression()?.forEach { expr ->
+                columnsCtx.columnList()?.column()?.forEach { column ->
+                    val expr = column.expression()
                     columnsList.add(mapExpression(expr))
-                    columnsAsText.add(expr.text)
+                    columnNames.add(column.name?.text ?: expr.text)
                 }
             }
             // Если список пуст — значит выбраны все (*)
 
             // 3. Фильтрующее условие WHERE
-            val whereCtx = selectCtx.whereClause()
-
-            val filterObj: Expression? = if (whereCtx != null) {
-                val exprCtx = whereCtx.expression()
-                // Вызываем нашу рекурсивную функцию
-                mapExpression(exprCtx)
-            } else {
-                null
-            }
+            val whereClauses = selectCtx.additionalClause().mapNotNull { it.whereClause() }
+            val filterExpr =
+                if (whereClauses.isEmpty()) null
+                else mapExpression(whereClauses.single().expression())
 
             // 4. Ограничивающий вывод LIMIT
-            val limitCtx = selectCtx.limitClause()
-            val limitValue = limitCtx?.count?.text?.toInt()
+            val limitClauses = selectCtx.additionalClause().mapNotNull { it.limitClause() }
+            val limitValue =
+                if (limitClauses.isEmpty()) null
+                else limitClauses.single().count.text.toInt()
+
+            // 5. Смещение вывода OFFSET
+            val offsetClauses = selectCtx.additionalClause().mapNotNull { it.offsetClause() }
+            val offsetValue =
+                if (offsetClauses.isEmpty()) null
+                else offsetClauses.single().count.text.toInt()
+
+            // 6. Упорядочивание вывода ORDER BY
+            val orderClauses = selectCtx.additionalClause().mapNotNull { it.orderClause() }
+            val sortExpr =
+                if (orderClauses.isEmpty()) null
+                else mapExpression(orderClauses.single().expression())
+            val sortDescending = orderClauses.singleOrNull()?.DESC() != null
 
             return QueryAST(
                 targetClassName = className,
-                filter = filterObj,
+                filter = filterExpr,
                 limit = limitValue,
+                offset = offsetValue,
+                sort = sortExpr,
+                sortDescending = sortDescending,
                 columns = columnsList,
-                columnsAsText = columnsAsText
+                columnNames = columnNames
             )
         }
 

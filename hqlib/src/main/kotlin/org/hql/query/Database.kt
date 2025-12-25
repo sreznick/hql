@@ -11,6 +11,14 @@ class Database(val heap: Heap) {
         val table = tables.getOrPut(ast.targetClassName) {
             HprofTable(heap, ast.targetClassName)
         }
-        table.select(ast.columns, ast.columnsAsText, ast.filter, ast.limit ?: Int.MAX_VALUE)
+        table.select(
+            columns = ast.columns,
+            columnNames = ast.columnNames,
+            filter = ast.filter,
+            sort = ast.sort,
+            sortDescending = ast.sortDescending,
+            limit = ast.limit,
+            offset = ast.offset
+        )
     }
 }

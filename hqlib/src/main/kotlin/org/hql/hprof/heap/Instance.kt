@@ -1,6 +1,6 @@
 package org.hql.hprof.heap
 
-class Instance(val id: Identifier) {
+open class Instance(val id: Identifier) {
     private var cls: Class? = null
     private val fieldValues = mutableMapOf<String, Any?>()
 
@@ -18,4 +18,13 @@ class Instance(val id: Identifier) {
     fun getType() = getClass().getName()
     fun getFieldValues() = fieldValues.toMap()
     operator fun get(name: String) = fieldValues.getValue(name)
+}
+
+class StringInstance(id: Identifier): Instance(id), Comparable<StringInstance> {
+    private val content
+        get() = (get("value") as List<Byte>).toByteArray().toString(Charsets.UTF_8)
+
+    override fun toString() = "\"" + content + "\""
+
+    override fun compareTo(other: StringInstance) = content.compareTo(other.content)
 }

@@ -112,9 +112,9 @@ sealed class Expression {
 
             if (leftResult is Number && rightResult is Number) {
                 return when (op) {
-                    "=" -> leftResult == rightResult
-                    "!=" -> leftResult != rightResult
-                    "<>" -> leftResult != rightResult
+                    "=" -> leftResult.toDouble() == rightResult.toDouble()
+                    "!=" -> leftResult.toDouble() != rightResult.toDouble()
+                    "<>" -> leftResult.toDouble() != rightResult.toDouble()
                     "<" -> leftResult.toDouble() < rightResult.toDouble()
                     "<=" -> leftResult.toDouble() <= rightResult.toDouble()
                     ">" -> leftResult.toDouble() > rightResult.toDouble()
@@ -125,8 +125,6 @@ sealed class Expression {
             throw RuntimeException("comparing values of type " +
                     "${className(leftResult)} and ${className(rightResult)} " +
                     "is not supported")
-
-
         }
     }
 }
