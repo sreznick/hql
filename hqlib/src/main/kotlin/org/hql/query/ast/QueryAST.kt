@@ -15,12 +15,45 @@ sealed class FilterExpr {
     data class Or(val left: FilterExpr, val right: FilterExpr) : FilterExpr()
 }
 
+// Рекурсивная функция для рисования дерева логики
+private fun printTree(expr: FilterExpr, indent: String) {
+    when (expr) {
+        is FilterExpr.And -> {
+            println("$indent[AND]")
+            printTree(expr.left, "$indent  |")
+            printTree(expr.right, "$indent  |")
+        }
+        is FilterExpr.Or -> {
+            println("$indent[OR]")
+            printTree(expr.left, "$indent  |")
+            printTree(expr.right, "$indent  |")
+        }
+        is FilterExpr.Comparison -> {
+            println("$indent-> ${expr.field} ${expr.operator} ${expr.value}")
+        }
+    }
+}
+
 data class QueryAST(
     val targetClassName: String,
     val filter: FilterExpr? = null,
     val limit: Int? = null,
     val columns: List<String> = emptyList()
 ) {
+    fun print() {
+        println(" -> Target Class: $targetClassName")
+        println(" -> Columns:      ${if (columns.isEmpty()) "*" else columns.joinToString(", ")}")
+        println(" -> Limit:        ${limit ?: "All"}")
+        println(" -> Logic Tree:")
+
+        // Проверка
+        if (filter != null) {
+            printTree(filter, indent = "    ")
+        } else {
+            println("    (No filter)")
+        }
+    }
+
     companion object {
         fun create(query: String): QueryAST {
             val charStream = CharStreams.fromString(query)

@@ -91,15 +91,9 @@ class Heap(path: String) {
             }
         }
         reader.instances.forEach { (id, inst) ->
-            if (id.toString() == "00 00 00 00 96 e7 b6 10") {
-                println("here")
-            }
             if (inst is InstanceInternal) {
                 val instObj = objects[id] as Instance
                 val classObj = classes[inst.classId]!!
-                if (id.toString() == "00 00 00 00 96 e7 b6 10") {
-                    println("there")
-                }
                 instObj.setClass(classObj)
                 classObj.addInstance(instObj)
                 inst.fieldValues.forEach { (fieldId, value) ->
