@@ -30,6 +30,10 @@ class Heap(path: String) {
             return null
         if (objects.contains(id))
             return objects[id]!!
+        if (!(id in instances)) {
+            // TODO: add some kind of logs
+            return null
+        }
         val x = instances[id]!!
         if (x is InstanceInternal) {
             val inst = createInstance(id, x)
