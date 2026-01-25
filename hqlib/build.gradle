@@ -4,11 +4,18 @@
 
 plugins {
     id 'buildlogic.kotlin-library-conventions'
+    id 'org.jetbrains.kotlin.plugin.serialization' version '2.3.0'
     id 'antlr'
 }
 
 dependencies {
     implementation libs.antlr4.runtime
+
+    runtimeOnly 'com.charleskorn.kaml:kaml-jvm:0.104.0'
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
+    implementation "com.charleskorn.kaml:kaml:0.104.0"
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
 
     antlr libs.antlr4 // use ANTLR version 4
 }

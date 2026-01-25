@@ -5,6 +5,7 @@
 plugins {
     // Support convention plugins written in Groovy. Convention plugins are build scripts in 'src/main' that automatically become available as plugins in the main build.
     id 'groovy-gradle-plugin'
+    id 'org.jetbrains.kotlin.jvm' version '2.3.0'
 }
 
 repositories {
@@ -14,4 +15,6 @@ repositories {
 
 dependencies {
     implementation libs.kotlin.gradle.plugin
+
+    testImplementation 'org.jetbrains.kotlin:kotlin-test'
 }
