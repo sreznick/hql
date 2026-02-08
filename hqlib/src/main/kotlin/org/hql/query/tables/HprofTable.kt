@@ -1,12 +1,13 @@
-package org.hql.query
+package org.hql.query.tables
 
 import org.hql.hprof.heap.Class
 import org.hql.hprof.heap.Heap
-import org.hql.hprof.heap.Instance
+import org.hql.hprof.heap.instances.Instance
+import org.hql.query.Table
 import org.hql.query.expressions.Expression
 import kotlin.math.max
 
-class HprofTable(private val heap: Heap, className: String) {
+class HprofTable(private val heap: Heap, className: String) : Table {
     private val cls: Class
     private val fieldNames: Set<String>
     private val instances: List<Instance>
@@ -46,14 +47,14 @@ class HprofTable(private val heap: Heap, className: String) {
         }
     }
 
-    fun select(
+    override fun select(
         columns: List<Expression>,
         columnNames: List<String>,
-        filter: Expression? = null,
-        sort: Expression? = null,
-        sortDescending: Boolean = false,
-        limit: Int? = null,
-        offset: Int? = null
+        filter: Expression?,
+        sort: Expression?,
+        sortDescending: Boolean,
+        limit: Int?,
+        offset: Int?
     ) {
         val columns_ = columns.ifEmpty { fieldNames.map { Expression.Field(it) } }
         val columnsAsText_ = columnNames.ifEmpty { fieldNames.toList() }

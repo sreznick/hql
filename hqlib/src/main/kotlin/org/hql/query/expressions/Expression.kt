@@ -1,6 +1,6 @@
 package org.hql.query.expressions
 
-import org.hql.hprof.heap.Instance
+import org.hql.hprof.heap.instances.Instance
 
 private fun className(x: Any?) = if (x == null) "null" else x::class.simpleName
 

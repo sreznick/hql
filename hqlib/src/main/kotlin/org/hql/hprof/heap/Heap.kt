@@ -1,5 +1,7 @@
 package org.hql.hprof.heap
 
+import org.hql.hprof.heap.instances.Instance
+import org.hql.hprof.heap.instances.StringInstance
 import org.hql.hprof.reader.HprofReader
 import org.hql.hprof.reader.InstanceInternal
 import java.io.File

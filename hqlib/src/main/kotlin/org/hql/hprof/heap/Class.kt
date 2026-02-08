@@ -1,5 +1,7 @@
 package org.hql.hprof.heap
 
+import org.hql.hprof.heap.instances.Instance
+
 class Class(val id: Identifier) {
     private var name: String? = null
     private var superclass: Class? = null

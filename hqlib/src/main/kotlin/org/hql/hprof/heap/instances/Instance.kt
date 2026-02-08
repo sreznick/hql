@@ -1,4 +1,7 @@
-package org.hql.hprof.heap
+package org.hql.hprof.heap.instances
+
+import org.hql.hprof.heap.Class
+import org.hql.hprof.heap.Identifier
 
 open class Instance(val id: Identifier) {
     private var cls: Class? = null
