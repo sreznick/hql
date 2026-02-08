@@ -57,7 +57,9 @@ object CoroutineInstanceMapper {
             "kotlinx.coroutines.Empty" -> CoroutineState.ACTIVE
 
             // comment for later removal: надо перепроверять, возможно это не 100% правда
-            "kotlinx.coroutines.NodeList" -> (this["_prev"] as? Instance).toCoroutineState()
+            "kotlinx.coroutines.NodeList",
+            $$"kotlinx.coroutines.JobSupport$ChildCompletion" -> (this["_prev"] as? Instance).toCoroutineState()
+            "kotlinx.coroutines.ChildHandleNode" -> ((this["childJob"] as? Instance)?.get("_state") as? Instance).toCoroutineState()
 
             $$"kotlinx.coroutines.JobSupport$Finishing" ->
                 CoroutineState.WAITING_CHILDREN
