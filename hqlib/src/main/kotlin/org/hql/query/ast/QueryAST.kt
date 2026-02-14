@@ -62,8 +62,7 @@ data class QueryAST(
     val columns: List<Expression> = emptyList(),
     val columnNames: List<String> = emptyList(),
     val filter: Expression? = null,
-    val sort: Expression? = null,
-    val sortDescending: Boolean = false,
+    val orderBy: List<Pair<Expression, Boolean>> = emptyList(), // <sort, sortDescending>
     val limit: Int? = null,
     val offset: Int? = null
 ) {
@@ -77,7 +76,17 @@ data class QueryAST(
             columns.forEach { printTree(it, indent = "    ") }
         }
         println(" -> Limit:        ${limit ?: "All"}")
-        println(" -> Order:        ${sort ?: "None"}")
+        println(" -> Order:        ")
+        if (orderBy.isEmpty()) {
+            println("NONE")
+        } else {
+            println()
+            orderBy.forEach { (expr, isDesc) ->
+                val dir = if (isDesc) "DESC" else "ASC"
+                println("      Direction: $dir")
+                printTree(expr, indent = "      ")
+            }
+        }
         println(" -> Logic Tree:")
 
         // Проверка
@@ -136,18 +145,24 @@ data class QueryAST(
 
             // 6. Упорядочивание вывода ORDER BY
             val orderClauses = selectCtx.additionalClause().mapNotNull { it.orderClause() }
-            val sortExpr =
-                if (orderClauses.isEmpty()) null
-                else mapExpression(orderClauses.single().expression())
-            val sortDescending = orderClauses.singleOrNull()?.DESC() != null
+            val orderByList = mutableListOf<Pair<Expression, Boolean>>()
+
+            if (orderClauses.isNotEmpty()) {
+                val elements = orderClauses.single().orderList().orderElement()
+
+                elements.forEach { el ->
+                    val expr = mapExpression(el.expression())
+                    val isDesc = el.DESC() != null
+                    orderByList.add(expr to isDesc)
+                }
+            }
 
             return QueryAST(
                 targetClassName = className,
                 filter = filterExpr,
                 limit = limitValue,
                 offset = offsetValue,
-                sort = sortExpr,
-                sortDescending = sortDescending,
+                orderBy = orderByList,
                 columns = columnsList,
                 columnNames = columnNames
             )

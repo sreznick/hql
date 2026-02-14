@@ -50,8 +50,7 @@ class HprofTable(private val heap: Heap, className: String) {
         columns: List<Expression>,
         columnNames: List<String>,
         filter: Expression? = null,
-        sort: Expression? = null,
-        sortDescending: Boolean = false,
+        orderBy: List<Pair<Expression, Boolean>> = emptyList(),
         limit: Int? = null,
         offset: Int? = null
     ) {
@@ -67,16 +66,22 @@ class HprofTable(private val heap: Heap, className: String) {
                 result
             }
         }
-        sort?.let {
-            val selector: (Instance) -> Comparable<Any?> = { instance ->
-                val result = sort.eval(instance)
-                val comparable = result as? Comparable<Any?>
-                    ?: throw RuntimeException("result (type ${if (result == null) null else result::class.simpleName}) is not comparable")
-                comparable
+        if (orderBy.isNotEmpty()) {
+            processedInstances = processedInstances.sortedWith { a, b ->
+                for ((expr, isDesc) in orderBy) {
+                    val valA = expr.eval(a)
+                    val valB = expr.eval(b)
+
+                    val compA = valA as? Comparable<Any?>
+                    val compB = valB as? Comparable<Any?>
+
+                    val res = compareValues(compA, compB)
+                    if (res != 0) {
+                        return@sortedWith if (isDesc) -res else res
+                    }
+                }
+                0
             }
-            processedInstances =
-                if (sortDescending) processedInstances.sortedByDescending(selector)
-                else                processedInstances.sortedBy(selector)
         }
         offset?.let {
             processedInstances = processedInstances.drop(offset)
