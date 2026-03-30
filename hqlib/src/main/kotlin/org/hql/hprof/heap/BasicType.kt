@@ -1,6 +1,7 @@
 package org.hql.hprof.heap
 
 import java.lang.RuntimeException
+import kotlin.enums.enumEntries
 
 enum class BasicType(val typeId: Int) {
     OBJECT(2),
@@ -14,7 +15,7 @@ enum class BasicType(val typeId: Int) {
     LONG(11);
 
     companion object {
-        fun from(typeId: Int) = enumValues<BasicType>().firstOrNull { it.typeId == typeId }
+        fun from(typeId: Int) = enumEntries<BasicType>().firstOrNull { it.typeId == typeId }
             ?: throw RuntimeException("unknown basic type: $typeId")
     }
 }

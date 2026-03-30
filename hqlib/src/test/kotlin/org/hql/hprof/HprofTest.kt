@@ -65,8 +65,9 @@ class HprofTest {
             )
 
             hprofPath.inputStream().use {
-                val hprof = HprofReader(it)
-                assertEquals(expectations.stringsCount, hprof.strings.size)
+                val reader = HprofReader(it)
+                val hprof = reader.getHprof()
+                assertEquals(expectations.stringsCount, hprof.getAllStrings().size)
             }
         }
     }

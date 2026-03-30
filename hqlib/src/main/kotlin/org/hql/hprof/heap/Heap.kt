@@ -1,20 +1,17 @@
 package org.hql.hprof.heap
 
+import org.hql.hprof.reader.Hprof
 import org.hql.hprof.reader.HprofReader
 import org.hql.hprof.reader.InstanceInternal
 import java.io.File
 import kotlin.collections.forEach
 
-class Heap(path: String) {
-    val format: String
-    val timestamp: Long
-    val reader: HprofReader
-
+class Heap(private val hprof: Hprof) {
     private val classes: Map<String, Class>
     private val instances: Map<Identifier, Instance>
 
     private fun createInstance(id: Identifier, i: InstanceInternal): Instance {
-        val className = reader.strings[reader.classNames[i.classId]!!]!!.replace("/", ".")
+        val className = hprof.getClassName(i.classId)
         if (className == "java.lang.String")
             return StringInstance(id)
         return Instance(id)
@@ -22,7 +19,7 @@ class Heap(path: String) {
 
     private fun dfs(
         objects: MutableMap<Identifier, Any>,
-        instances: MutableMap<Identifier, Any>,
+        instances: Map<Identifier, Any>,
         id: Identifier
     ): Any? {
         //println(id)
@@ -30,7 +27,7 @@ class Heap(path: String) {
             return null
         if (objects.contains(id))
             return objects[id]!!
-        if (!(id in instances)) {
+        if (id !in instances) {
             // TODO: add some kind of logs
             return null
         }
@@ -57,7 +54,7 @@ class Heap(path: String) {
 
     private fun fillInstances(
         objects: MutableMap<Identifier, Any>,
-        instances: MutableMap<Identifier, Any>
+        instances: Map<Identifier, Any>
     ) {
         instances.forEach { (id, _) ->
             dfs(objects, instances, id)
@@ -65,32 +62,25 @@ class Heap(path: String) {
     }
 
     init {
-        val stream = File(path).inputStream()
-        reader = HprofReader(stream)
-        stream.close()
-
-        format = reader.format
-        timestamp = reader.timestamp
-
         val classes = mutableMapOf<Identifier, Class>()
         val objects = mutableMapOf<Identifier, Any>()
 
-        reader.classes.forEach { (id, cls) ->
+        hprof.getAllClasses().forEach { (id, cls) ->
             val classObj = Class(id)
             classes[id] = classObj
             objects[id] = classObj
         }
-        fillInstances(objects, reader.instances)
+        fillInstances(objects, hprof.getAllInstances())
 
-        reader.classes.forEach { (id, cls) ->
+        hprof.getAllClasses().forEach { (id, cls) ->
             val classObj = classes[id]!!
-            val className = reader.strings[reader.classNames[id]!!]!!.replace("/", ".")
+            val className = hprof.getClassName(id)
             classObj.setName(className)
             classObj.setSuperclass(
                 if (cls.superclassId.isNull()) null else classes[cls.superclassId]!!
             )
             cls.staticFields.forEach { (fieldId, value) ->
-                val fieldName = reader.strings[fieldId]!!
+                val fieldName = hprof.getString(fieldId)
                 if (value is Identifier) {
                     if (value.isNull())
                         classObj.addStaticField(fieldName, null)
@@ -101,18 +91,18 @@ class Heap(path: String) {
                 }
             }
             cls.instanceFieldTypes.forEach { (fieldId, value) ->
-                val fieldName = reader.strings[fieldId]!!
+                val fieldName = hprof.getString(fieldId)
                 classObj.addInstanceFieldType(fieldName, value)
             }
         }
-        reader.instances.forEach { (id, inst) ->
+        hprof.getAllInstances().forEach { (id, inst) ->
             if (inst is InstanceInternal) {
                 val instObj = objects[id] as Instance
                 val classObj = classes[inst.classId]!!
                 instObj.setClass(classObj)
                 classObj.addInstance(instObj)
                 inst.fieldValues.forEach { (fieldId, value) ->
-                    val fieldName = reader.strings[fieldId]!!
+                    val fieldName = hprof.getString(fieldId)
                     if (value is Identifier) {
                         if (value.isNull())
                             instObj.addField(fieldName, null)

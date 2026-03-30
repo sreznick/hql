@@ -3,6 +3,7 @@ package org.hql.hprof.reader
 import org.hql.hprof.heap.BasicType
 import org.hql.hprof.heap.Identifier
 import java.io.DataInputStream
+import java.io.File
 import java.io.InputStream
 
 
@@ -12,10 +13,9 @@ class HprofReader(inputStream: InputStream) {
     val identifierSize: Int
     val timestamp: Long
 
-    val strings = hashMapOf<Identifier, String>()
-    val classNames = hashMapOf<Identifier, Identifier>()
-    val classes = hashMapOf<Identifier, ClassInternal>()
-    val instances = hashMapOf<Identifier, Any>()
+    private val hprof = Hprof()
+
+    constructor(path: String) : this(File(path).inputStream())
 
     init {
         val s = StringBuilder()
@@ -29,6 +29,8 @@ class HprofReader(inputStream: InputStream) {
         timestamp = stream.readLong()
         while (readTag()) {}
     }
+
+    fun getHprof() = hprof
 
     private fun DataInputStream.readIdentifier() =
         Identifier(readNBytes(identifierSize))
@@ -68,16 +70,15 @@ class HprofReader(inputStream: InputStream) {
     private fun readStringTag(stream: DataInputStream) {
         val id = stream.readIdentifier()
         val string = stream.readBytes().toString(Charsets.UTF_8)
-        strings[id] = string
+        hprof.addString(id, string)
     }
 
     private fun readLoadClassTag(stream: DataInputStream) {
-        stream.readInt()
+        stream.readInt() // class serial number
         val classId = stream.readIdentifier()
-        stream.readInt()
+        stream.readInt() // stack trace serial number
         val classNameId = stream.readIdentifier()
-
-        classNames[classId] = classNameId
+        hprof.addClassName(classId, classNameId)
     }
 
     private fun readHeapDumpTag(stream: DataInputStream) {
@@ -162,14 +163,7 @@ class HprofReader(inputStream: InputStream) {
             instanceFields.add(fieldName to fieldType)
         }
 
-        classes[classId] = ClassInternal(
-            id = classId,
-            superclassId = superclassId,
-            instanceSize = instanceSize,
-            staticFields = staticFields.toMap(),
-            instanceFieldTypes = instanceFields.toList()
-        )
-        //println("class $classId")
+        hprof.addClass(classId, superclassId, instanceSize, staticFields.toMap(), instanceFields.toList())
     }
 
     private fun readInstanceDump(stream: DataInputStream) {
@@ -180,36 +174,31 @@ class HprofReader(inputStream: InputStream) {
 
         val content = DataInputStream(stream.readNBytes(contentSize).inputStream())
         val fields = mutableMapOf<Identifier, Any>()
-        var cls = classes[classId]
-        while (cls != null) {
-            cls.instanceFieldTypes.forEach { (name, type) ->
-                fields[name] = content.readBasicType(type)
-            }
-            cls = classes[cls.superclassId]
+        hprof.getInstanceFieldTypes(classId).forEach { (name, type) ->
+            fields[name] = content.readBasicType(type)
         }
         content.close()
-        instances[id] = InstanceInternal(
+        hprof.addInstance(id, InstanceInternal(
             classId = classId,
             fieldValues = fields.toMap()
-        )
-        //println("objectInstance $id classId=$classId")
+        ))
     }
 
     private fun readObjectArrayDump(stream: DataInputStream) {
         val id = stream.readIdentifier()
         stream.readInt() // stack trace serial number
-        val n = stream.readInt()
+        val size = stream.readInt()
         stream.readIdentifier() // element type identifier
-        instances[id] = List(n) { stream.readIdentifier() }
-        //println("objectArrayInstance $id")
+        val list = List(size) { stream.readIdentifier() }
+        hprof.addInstance(id, list)
     }
 
     private fun readPrimitiveArrayDump(stream: DataInputStream) {
         val id = stream.readIdentifier()
         stream.readInt() // stack trace serial number
-        val n = stream.readInt()
+        val size = stream.readInt()
         val type = BasicType.from(stream.read())
-        instances[id] = List(n) { stream.readBasicType(type) }
-        //println("primitiveArrayInstance $id")
+        val list = List(size) { stream.readBasicType(type) }
+        hprof.addInstance(id, list)
     }
 }

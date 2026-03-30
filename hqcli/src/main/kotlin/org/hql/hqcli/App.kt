@@ -1,6 +1,7 @@
 package org.hql.hqcli
 
 import org.hql.hprof.heap.Heap
+import org.hql.hprof.reader.HprofReader
 import org.hql.query.Database
 import org.hql.query.ast.QueryAST
 
@@ -22,7 +23,8 @@ fun main(args: Array<String>) {
     }
 
     println("Running HQL CLI...\n")
-    val heap = Heap(path)
+    val reader = HprofReader(path)
+    val heap = Heap(reader.getHprof())
     val db = Database(heap)
 
     for ((i, query) in queries.withIndex()) {
