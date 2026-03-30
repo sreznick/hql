@@ -8,17 +8,33 @@ class Database(val heap: Heap) {
 
     fun query(query: String) {
         val ast = QueryAST.create(query)
-        val table = tables.getOrPut(ast.targetClassName) {
-            HprofTable(heap, ast.targetClassName)
+        var table = tables.getOrPut(ast.targetClassName) {
+            val cls = try {
+                heap.getClassByName(ast.targetClassName)
+            } catch (_: NullPointerException) {
+                throw RuntimeException("no such class: ${ast.targetClassName}")
+            }
+            HprofTable(
+                cls.getInstanceFieldTypes().map { it.key }.toList(),
+                cls.getInstances()
+            )
         }
-        table.select(
-            columns = ast.columns,
-            columnNames = ast.columnNames,
-            filter = ast.filter,
-            sort = ast.sort,
-            sortDescending = ast.sortDescending,
-            limit = ast.limit,
-            offset = ast.offset
-        )
+
+        if (ast.columns.isNotEmpty()) {
+            table = table.select(ast.columns, ast.columnNames)
+        }
+        ast.filter?.let { filter ->
+            table = table.filter(filter)
+        }
+        ast.sort?.let { sort ->
+            table = table.sort(sort, ast.sortDescending)
+        }
+        ast.limit?.let { limit ->
+            table = table.limit(limit)
+        }
+        ast.offset?.let { offset ->
+            table = table.offset(offset)
+        }
+        table.print()
     }
 }

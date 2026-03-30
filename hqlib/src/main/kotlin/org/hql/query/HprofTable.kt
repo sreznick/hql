@@ -1,27 +1,20 @@
 package org.hql.query
 
-import org.hql.hprof.heap.Class
-import org.hql.hprof.heap.Heap
 import org.hql.hprof.heap.Instance
 import org.hql.query.expressions.Expression
 import kotlin.math.max
 
-class HprofTable(private val heap: Heap, className: String) {
-    private val cls: Class
-    private val fieldNames: Set<String>
-    private val instances: List<Instance>
-
-    init {
-        try {
-            cls = heap.getClassByName(className)
-        } catch (_: NullPointerException) {
-            throw RuntimeException("no such class: $className")
+class HprofTable(
+    private val columns: List<String>,
+    private val instances: List<Instance.ObjectI>
+) {
+    fun print() {
+        val values = columns.map { column ->
+            instances.map { instance ->
+                instance[column].toString()
+            }
         }
-        fieldNames = cls.getInstanceFieldTypes().map { it.key }.toSet()
-        instances = cls.getInstances()
-    }
 
-    private fun printTable(columns: List<String>, values: List<List<String>>) {
         val cols = columns.size
         val rows = values[0].size
         if (cols == 0 || rows == 0) return
@@ -46,45 +39,43 @@ class HprofTable(private val heap: Heap, className: String) {
         }
     }
 
-    fun select(
-        columns: List<Expression>,
-        columnNames: List<String>,
-        filter: Expression? = null,
-        sort: Expression? = null,
-        sortDescending: Boolean = false,
-        limit: Int? = null,
-        offset: Int? = null
-    ) {
-        val columns_ = columns.ifEmpty { fieldNames.map { Expression.Field(it) } }
-        val columnsAsText_ = columnNames.ifEmpty { fieldNames.toList() }
-
-        var processedInstances = instances
-        filter?.let {
-            processedInstances = processedInstances.filter { instance ->
-                val result = filter.eval(instance)
-                if (result !is Instance.BooleanI)
-                    throw RuntimeException("result of a filter expression should be boolean")
-                result.v
+    fun select(columns: List<Expression>, columnNames: List<String>): HprofTable {
+        val processedInstances = instances.map { instance ->
+            val newInstance = Instance.ObjectI()
+            instance.getFields().forEach { (name, instance) ->
+                newInstance.addField(name, instance)
             }
-        }
-        sort?.let {
-            val selector = { instance: Instance -> sort.eval(instance) }
-            processedInstances =
-                if (sortDescending) processedInstances.sortedByDescending(selector)
-                else                processedInstances.sortedBy(selector)
-        }
-        offset?.let {
-            processedInstances = processedInstances.drop(offset)
-        }
-        limit?.let {
-            processedInstances = processedInstances.take(limit)
-        }
-
-        val values = columns_.map { column ->
-            processedInstances.map { instance ->
-                column.eval(instance).toString()
+            columns.zip(columnNames).forEach { (expr, name) ->
+                newInstance.addField(name, expr.eval(instance))
             }
+            newInstance
         }
-        printTable(columnsAsText_, values)
+        return HprofTable(columnNames, processedInstances)
+    }
+
+    fun filter(filter: Expression): HprofTable {
+        val processedInstances = instances.filter { instance ->
+            val result = filter.eval(instance)
+            if (result !is Instance.BooleanI)
+                throw RuntimeException("result of a filter expression should be boolean")
+            result.v
+        }
+        return HprofTable(columns, processedInstances)
+    }
+
+    fun sort(sort: Expression, sortDescending: Boolean = false): HprofTable {
+        val selector = { instance: Instance -> sort.eval(instance) }
+        val processedInstances =
+            if (sortDescending) instances.sortedByDescending(selector)
+            else                instances.sortedBy(selector)
+        return HprofTable(columns, processedInstances)
+    }
+
+    fun offset(offset: Int): HprofTable {
+        return HprofTable(columns, instances.drop(offset))
+    }
+
+    fun limit(limit: Int): HprofTable {
+        return HprofTable(columns, instances.take(limit))
     }
 }

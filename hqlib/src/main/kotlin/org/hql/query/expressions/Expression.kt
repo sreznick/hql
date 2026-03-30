@@ -32,23 +32,7 @@ sealed class Expression {
         override fun eval(instance: Instance): Instance {
             val leftResult = left.eval(instance)
             val rightResult = right.eval(instance)
-
-            if (leftResult is Instance.ByteI && rightResult is Instance.ByteI)
-                return Instance.IntI(leftResult.v + rightResult.v)
-            if (leftResult is Instance.ShortI && rightResult is Instance.ShortI)
-                return Instance.IntI(leftResult.v + rightResult.v)
-            if (leftResult is Instance.IntI && rightResult is Instance.IntI)
-                return Instance.IntI(leftResult.v + rightResult.v)
-            if (leftResult is Instance.LongI && rightResult is Instance.LongI)
-                return Instance.LongI(leftResult.v + rightResult.v)
-            if (leftResult is Instance.FloatI && rightResult is Instance.FloatI)
-                return Instance.FloatI(leftResult.v + rightResult.v)
-            if (leftResult is Instance.DoubleI && rightResult is Instance.DoubleI)
-                return Instance.DoubleI(leftResult.v + rightResult.v)
-
-            throw RuntimeException("adding values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+            return leftResult + rightResult
         }
     }
 
@@ -56,46 +40,14 @@ sealed class Expression {
         override fun eval(instance: Instance): Instance {
             val leftResult = left.eval(instance)
             val rightResult = right.eval(instance)
-
-            if (leftResult is Instance.ByteI && rightResult is Instance.ByteI)
-                return Instance.IntI(leftResult.v - rightResult.v)
-            if (leftResult is Instance.ShortI && rightResult is Instance.ShortI)
-                return Instance.IntI(leftResult.v - rightResult.v)
-            if (leftResult is Instance.IntI && rightResult is Instance.IntI)
-                return Instance.IntI(leftResult.v - rightResult.v)
-            if (leftResult is Instance.LongI && rightResult is Instance.LongI)
-                return Instance.LongI(leftResult.v - rightResult.v)
-            if (leftResult is Instance.FloatI && rightResult is Instance.FloatI)
-                return Instance.FloatI(leftResult.v - rightResult.v)
-            if (leftResult is Instance.DoubleI && rightResult is Instance.DoubleI)
-                return Instance.DoubleI(leftResult.v - rightResult.v)
-
-            throw RuntimeException("subtracting values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+            return leftResult - rightResult
         }
     }
     data class Mult(val left: Expression, val right: Expression): Expression() {
         override fun eval(instance: Instance): Instance {
             val leftResult = left.eval(instance)
             val rightResult = right.eval(instance)
-
-            if (leftResult is Instance.ByteI && rightResult is Instance.ByteI)
-                return Instance.IntI(leftResult.v * rightResult.v)
-            if (leftResult is Instance.ShortI && rightResult is Instance.ShortI)
-                return Instance.IntI(leftResult.v * rightResult.v)
-            if (leftResult is Instance.IntI && rightResult is Instance.IntI)
-                return Instance.IntI(leftResult.v * rightResult.v)
-            if (leftResult is Instance.LongI && rightResult is Instance.LongI)
-                return Instance.LongI(leftResult.v * rightResult.v)
-            if (leftResult is Instance.FloatI && rightResult is Instance.FloatI)
-                return Instance.FloatI(leftResult.v * rightResult.v)
-            if (leftResult is Instance.DoubleI && rightResult is Instance.DoubleI)
-                return Instance.DoubleI(leftResult.v * rightResult.v)
-
-            throw RuntimeException("multiplying values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+            return leftResult * rightResult
         }
     }
 
@@ -103,23 +55,7 @@ sealed class Expression {
         override fun eval(instance: Instance): Instance {
             val leftResult = left.eval(instance)
             val rightResult = right.eval(instance)
-
-            if (leftResult is Instance.ByteI && rightResult is Instance.ByteI)
-                return Instance.IntI(leftResult.v / rightResult.v)
-            if (leftResult is Instance.ShortI && rightResult is Instance.ShortI)
-                return Instance.IntI(leftResult.v / rightResult.v)
-            if (leftResult is Instance.IntI && rightResult is Instance.IntI)
-                return Instance.IntI(leftResult.v / rightResult.v)
-            if (leftResult is Instance.LongI && rightResult is Instance.LongI)
-                return Instance.LongI(leftResult.v / rightResult.v)
-            if (leftResult is Instance.FloatI && rightResult is Instance.FloatI)
-                return Instance.FloatI(leftResult.v / rightResult.v)
-            if (leftResult is Instance.DoubleI && rightResult is Instance.DoubleI)
-                return Instance.DoubleI(leftResult.v / rightResult.v)
-
-            throw RuntimeException("dividing values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+            return leftResult / rightResult
         }
     }
 
