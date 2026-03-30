@@ -1,11 +1,13 @@
 package org.hql.hprof.heap
 
+import org.hql.hprof.reader.BasicType
+
 class Class(val id: Identifier) {
     private var name: String? = null
     private var superclass: Class? = null
-    private val staticFields = mutableMapOf<String, Any?>()
+    private val staticFields = mutableMapOf<String, Instance>()
     private val instanceFieldTypes = mutableMapOf<String, BasicType>()
-    private val instances = mutableListOf<Instance>()
+    private val instances = mutableListOf<Instance.ObjectI>()
 
     /* functions intended for use only during construction */
     internal fun setName(name: String) {
@@ -14,13 +16,13 @@ class Class(val id: Identifier) {
     internal fun setSuperclass(superclass: Class?) {
         this.superclass = superclass
     }
-    internal fun addStaticField(name: String, value: Any?) {
+    internal fun addStaticField(name: String, value: Instance) {
         this.staticFields[name] = value
     }
     internal fun addInstanceFieldType(name: String, type: BasicType) {
         this.instanceFieldTypes[name] = type
     }
-    internal fun addInstance(instance: Instance) {
+    internal fun addInstance(instance: Instance.ObjectI) {
         instances.add(instance)
     }
 

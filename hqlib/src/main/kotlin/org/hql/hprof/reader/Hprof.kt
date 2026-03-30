@@ -1,13 +1,12 @@
 package org.hql.hprof.reader
 
-import org.hql.hprof.heap.BasicType
 import org.hql.hprof.heap.Identifier
 
 class Hprof {
     private val strings = hashMapOf<Identifier, String>()
     private val classNames = hashMapOf<Identifier, Identifier>()
     private val classes = hashMapOf<Identifier, ClassInternal>()
-    private val instances = hashMapOf<Identifier, Any>()
+    private val instances = hashMapOf<Identifier, InstanceInternal>()
 
     fun addString(id: Identifier, value: String) {
         if (strings.containsKey(id)) {
@@ -27,7 +26,7 @@ class Hprof {
         classId: Identifier,
         superclassId: Identifier,
         instanceSize: Int,
-        staticFields: Map<Identifier, Any>,
+        staticFields: Map<Identifier, BasicValue>,
         instanceFieldTypes: List<Pair<Identifier, BasicType>>
     ) {
         if (classes.containsKey(classId)) {
@@ -36,7 +35,7 @@ class Hprof {
         classes[classId] = ClassInternal(classId, superclassId, instanceSize, staticFields, instanceFieldTypes)
     }
 
-    fun addInstance(id: Identifier, instance: Any) {
+    fun addInstance(id: Identifier, instance: InstanceInternal) {
         if (instances.containsKey(id)) {
             throw RuntimeException("Duplicate instance '$id' with value '$instance'")
         }

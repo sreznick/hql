@@ -62,18 +62,13 @@ class HprofTable(private val heap: Heap, className: String) {
         filter?.let {
             processedInstances = processedInstances.filter { instance ->
                 val result = filter.eval(instance)
-                if (result !is Boolean)
+                if (result !is Instance.BooleanI)
                     throw RuntimeException("result of a filter expression should be boolean")
-                result
+                result.v
             }
         }
         sort?.let {
-            val selector: (Instance) -> Comparable<Any?> = { instance ->
-                val result = sort.eval(instance)
-                val comparable = result as? Comparable<Any?>
-                    ?: throw RuntimeException("result (type ${if (result == null) null else result::class.simpleName}) is not comparable")
-                comparable
-            }
+            val selector = { instance: Instance -> sort.eval(instance) }
             processedInstances =
                 if (sortDescending) processedInstances.sortedByDescending(selector)
                 else                processedInstances.sortedBy(selector)
