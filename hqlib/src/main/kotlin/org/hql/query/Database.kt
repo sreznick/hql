@@ -6,18 +6,24 @@ import org.hql.query.ast.QueryAST
 class Database(val heap: Heap) {
     val tables = hashMapOf<String, HprofTable>()
 
+    fun createTable(name: String): HprofTable {
+        val cls = try {
+            heap.getClassByName(name)
+        } catch (_: NullPointerException) {
+            throw RuntimeException("no such class: $name")
+        }
+        return HprofTable(
+            cls.getInstanceFieldTypes().map { it.key }.toList(),
+            cls.getInstances().map { instance ->
+                instance.getFields().mapValues { Cell.fromInstance(it.value) }
+            }
+        )
+    }
+
     fun query(query: String) {
         val ast = QueryAST.create(query)
         var table = tables.getOrPut(ast.targetClassName) {
-            val cls = try {
-                heap.getClassByName(ast.targetClassName)
-            } catch (_: NullPointerException) {
-                throw RuntimeException("no such class: ${ast.targetClassName}")
-            }
-            HprofTable(
-                cls.getInstanceFieldTypes().map { it.key }.toList(),
-                cls.getInstances()
-            )
+            createTable(ast.targetClassName)
         }
 
         if (ast.columns.isNotEmpty()) {

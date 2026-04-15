@@ -1,109 +1,104 @@
 package org.hql.query.expressions
 
-import org.hql.hprof.heap.Instance
+import org.hql.query.BooleanCell
+import org.hql.query.Cell
 
 private fun className(x: Any?) = if (x == null) "null" else x::class.simpleName
 
 sealed class Expression {
-    abstract fun eval(instance: Instance): Instance
+    abstract fun eval(row: Map<String, Cell>): Cell
 
-    data class Literal(val value: Instance): Expression() {
-        override fun eval(instance: Instance) = value
+    data class Literal(val value: Cell): Expression() {
+        override fun eval(row: Map<String, Cell>) = value
     }
 
     data class Field(val field: String): Expression() {
-        override fun eval(instance: Instance): Instance {
-            if (instance !is Instance.ObjectI)
-                throw RuntimeException("trying to access a field of ${className(instance)}")
-            return instance[field]
+        override fun eval(row: Map<String, Cell>): Cell {
+            if (!row.containsKey(field))
+                throw RuntimeException("no column named $field (columns: ${row.keys.joinToString(",")})")
+            return row[field]!!
         }
     }
 
     data class Access(val expr: Expression, val field: String): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val exprResult = expr.eval(instance)
-            if (exprResult !is Instance.ObjectI)
-                throw RuntimeException("trying to access $field of a value of type ${className(exprResult)}")
-            return exprResult[field]
+        override fun eval(row: Map<String, Cell>): Cell {
+            val exprResult = expr.eval(row)
+            return exprResult.access(field)
         }
     }
 
     data class Plus(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell  {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
             return leftResult + rightResult
         }
     }
 
     data class Minus(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
             return leftResult - rightResult
         }
     }
     data class Mult(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
             return leftResult * rightResult
         }
     }
 
     data class Div(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
             return leftResult / rightResult
         }
     }
 
     data class And(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-            if (leftResult !is Instance.BooleanI) {
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            if (leftResult !is BooleanCell) {
                 throw RuntimeException("left operand of AND should be boolean (got ${className(left)})")
             }
-            if (rightResult !is Instance.BooleanI) {
+            if (rightResult !is BooleanCell) {
                 throw RuntimeException("right operand of AND should be boolean (got ${className(right)})")
             }
-            return Instance.BooleanI(leftResult.v && rightResult.v)
+            return BooleanCell(leftResult.v && rightResult.v)
         }
     }
     data class Or(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-            if (leftResult !is Instance.BooleanI) {
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            if (leftResult !is BooleanCell) {
                 throw RuntimeException("left operand of OR should be boolean (got ${className(left)})")
             }
-            if (rightResult !is Instance.BooleanI) {
+            if (rightResult !is BooleanCell) {
                 throw RuntimeException("right operand of OR should be boolean (got ${className(right)})")
             }
-            return Instance.BooleanI(leftResult.v || rightResult.v)
+            return BooleanCell(leftResult.v || rightResult.v)
         }
     }
     data class Comparison(val left: Expression, val op: String, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Instance {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
 
-            fun matches(compareResult: Int): Boolean {
-                return when (op) {
-                    "=" -> compareResult == 0
-                    "!=" -> compareResult != 0
-                    "<>" -> compareResult != 0
-                    "<" -> compareResult < 0
-                    "<=" -> compareResult <= 0
-                    ">" -> compareResult > 0
-                    ">=" -> compareResult >= 0
-                    else -> throw RuntimeException("invalid operator: $op")
-                }
-            }
-
-            return Instance.BooleanI(matches(leftResult.compareTo(rightResult)))
+            return BooleanCell(when (op) {
+                "=" -> leftResult.compareTo(rightResult) == 0
+                "!=" -> leftResult.compareTo(rightResult) != 0
+                "<>" -> leftResult.compareTo(rightResult) != 0
+                "<" -> leftResult < rightResult
+                "<=" -> leftResult <= rightResult
+                ">" -> leftResult > rightResult
+                ">=" -> leftResult >= rightResult
+                else -> throw RuntimeException("invalid operator: $op")
+            })
         }
     }
 }
