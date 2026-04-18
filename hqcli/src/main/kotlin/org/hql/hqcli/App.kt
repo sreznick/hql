@@ -19,7 +19,7 @@ fun main(args: Array<String>) {
             print(">> ")
             readLine()
         }
-    }
+    }.filter { it.isNotBlank() }
 
     println("Running HQL CLI...\n")
     val heap = Heap(path)
