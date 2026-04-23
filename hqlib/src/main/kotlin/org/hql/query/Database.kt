@@ -9,9 +9,9 @@ class Database(val heap: Heap) {
     fun createTable(name: String): HprofTable {
         val cls = heap.getClassByName(name)
         return HprofTable(
-            cls.getInstanceFieldTypes().map { it.key }.toList(),
-            cls.getInstances().map { instance ->
-                instance.getFields().mapValues { Cell.fromInstance(it.value) }
+            cls.instanceFieldTypes.keys.toList(),
+            cls.instances.map { instance ->
+                instance.fields.mapValues { Cell.fromInstance(it.value) }
             }
         )
     }

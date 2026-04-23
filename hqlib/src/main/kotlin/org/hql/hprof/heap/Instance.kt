@@ -1,5 +1,9 @@
 package org.hql.hprof.heap
 
+import org.hql.hprof.reader.BasicValue
+import org.hql.hprof.reader.Hprof
+import org.hql.hprof.reader.InstanceInternal
+
 sealed class Instance {
     data object NullI : Instance()
 
@@ -28,21 +32,67 @@ sealed class Instance {
     }
 
     data class ClassI(val cls: Class) : Instance() {
-        override fun toString() = "<class object ${cls.getName()}>"
+        override fun toString() = "<class object ${cls.name}>"
     }
 
-    class ObjectI(val cls: Class) : Instance() {
-        private val fields = mutableMapOf<String, Instance>()
+    class ObjectI(private val hprof: Hprof, private val inst: InstanceInternal.Object) : Instance() {
+        val id: Identifier = inst.id
 
+        val cls: Class by lazy {
+            Class(hprof, hprof.getClassById(inst.classId))
+        }
 
-        override fun toString() = "<instance of class ${cls.getName()}>"
-        fun getClass(): Class = cls
-        fun getFields(): Map<String, Instance> = fields.toMap()
+        val fields: Map<String, Instance> by lazy {
+            inst.fieldValues
+                .mapKeys { (key, _) -> hprof.getString(key) }
+                .mapValues { (_, value) -> Instance.create(hprof, value) }
+        }
+
+        override fun toString() = "<instance of class ${cls.name}>"
         operator fun get(name: String): Instance = fields.getValue(name)
+    }
 
-        /* functions intended for use only during construction */
-        internal fun addField(name: String, value: Instance) {
-            this.fields[name] = value
+    companion object {
+        private val cache = mutableMapOf<Identifier, Instance>()
+        private fun convertObject(hprof: Hprof, inst: InstanceInternal.Object): Instance {
+            val className = hprof.getClassName(inst.classId)
+            return when (className) {
+                "java.lang.String" -> {
+                    val contentsAsBasicValue = inst.fieldValues.values.first() as BasicValue.Object
+                    val contentsAsArray = hprof.getInstanceById(contentsAsBasicValue.id) as InstanceInternal.PrimitiveArray
+                    val contents = contentsAsArray.values.map { (it as BasicValue.ByteV).v }
+                    val contentsAsString = contents.toByteArray().toString(Charsets.UTF_8)
+                    StringI(contentsAsString)
+                }
+                else -> ObjectI(hprof, inst)
+            }
+        }
+
+        internal fun createObject(hprof: Hprof, id: Identifier): Instance {
+            if (id.isNull()) return NullI
+            return cache.getOrPut(id) {
+                val inst = hprof.getInstanceById(id)
+                when (inst) {
+                    is InstanceInternal.ObjectArray ->
+                        ArrayI(inst.ids.map { createObject(hprof, it) })
+                    is InstanceInternal.PrimitiveArray ->
+                        ArrayI(inst.values.map { create(hprof, it) })
+                    is InstanceInternal.Object ->
+                        convertObject(hprof, inst)
+                }
+            }
+        }
+
+        internal fun create(hprof: Hprof, value: BasicValue): Instance = when (value) {
+            is BasicValue.Object -> createObject(hprof, value.id)
+            is BasicValue.BooleanV -> BooleanI(value.v)
+            is BasicValue.ByteV -> ByteI(value.v)
+            is BasicValue.CharV -> CharI(value.v)
+            is BasicValue.DoubleV -> DoubleI(value.v)
+            is BasicValue.FloatV -> FloatI(value.v)
+            is BasicValue.IntV -> IntI(value.v)
+            is BasicValue.LongV -> LongI(value.v)
+            is BasicValue.ShortV -> ShortI(value.v)
         }
     }
 }

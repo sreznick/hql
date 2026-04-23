@@ -5,6 +5,7 @@ import org.hql.hprof.heap.Identifier
 
 sealed class InstanceInternal {
     data class Object(
+        val id: Identifier,
         val classId: Identifier,
         val fieldValues: Map<Identifier, BasicValue>
     ) : InstanceInternal()

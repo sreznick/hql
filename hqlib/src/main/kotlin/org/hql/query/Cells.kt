@@ -187,7 +187,7 @@ data class StringCell(val value: String) : Cell {
 
 data class ClassCell(val cls: Class) : Cell {
     override val type: String = "class"
-    override fun toString() = "<class object ${cls.getName()}>"
+    override fun toString() = "<class object ${cls.name}>"
     override fun compareTo(other: Cell): Int {
         if (other is ClassCell) return cls.id.compareTo(other.cls.id)
         return super.compareTo(other)
@@ -195,7 +195,7 @@ data class ClassCell(val cls: Class) : Cell {
 }
 
 class ObjectCell(val obj: Instance.ObjectI) : Cell {
-    override val type: String = obj.getClass().getName()
-    override fun toString() = "<instance of class $type>"
+    override val type: String = obj.cls.name
+    override fun toString() = "<$type ${obj.id}>"
     override fun access(field: String): Cell = Cell.fromInstance(obj[field])
 }

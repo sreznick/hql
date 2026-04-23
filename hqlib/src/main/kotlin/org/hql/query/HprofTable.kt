@@ -15,8 +15,9 @@ class HprofTable(
         }
 
         val cols = columns.size
+        if (cols == 0) return
         val rows = values[0].size
-        if (cols == 0 || rows == 0) return
+        if (rows == 0) return
         val lengths = (0..<cols).map { i ->
             max(values[i].maxOf { it.length }, columns[i].length)
         }

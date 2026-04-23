@@ -176,6 +176,7 @@ class HprofReader(inputStream: InputStream) {
         }
         content.close()
         hprof.addInstance(id, InstanceInternal.Object(
+            id = id,
             classId = classId,
             fieldValues = fields.toMap()
         ))
