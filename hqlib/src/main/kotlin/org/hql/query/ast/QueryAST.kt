@@ -175,7 +175,7 @@ data class QueryAST(
                     Expression.Literal(StringCell(ctx.text.drop(1).dropLast(1)))
                 }
                 is ExprParser.NullLiteralExprContext -> {
-                    Expression.Literal(NullCell())
+                    Expression.Literal(NullCell)
                 }
 
                 // Случай: имя переменной

@@ -2,9 +2,7 @@ package org.hql.hprof.reader
 
 import org.hql.hprof.heap.Identifier
 import java.io.DataInputStream
-import java.io.File
 import java.io.InputStream
-import java.lang.RuntimeException
 
 
 class HprofReader(inputStream: InputStream) {
@@ -27,7 +25,6 @@ class HprofReader(inputStream: InputStream) {
         timestamp = stream.readLong()
         while (readTag()) {}
     }
-    constructor(path: String) : this(File(path).inputStream())
 
     fun getHprof() = hprof
 

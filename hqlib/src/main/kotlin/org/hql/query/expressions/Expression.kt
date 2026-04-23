@@ -1,9 +1,9 @@
 package org.hql.query.expressions
 
+import org.hql.ColumnNotFoundException
+import org.hql.HQLQueryException
 import org.hql.query.BooleanCell
 import org.hql.query.Cell
-
-private fun className(x: Any?) = if (x == null) "null" else x::class.simpleName
 
 sealed class Expression {
     abstract fun eval(row: Map<String, Cell>): Cell
@@ -15,7 +15,7 @@ sealed class Expression {
     data class Field(val field: String): Expression() {
         override fun eval(row: Map<String, Cell>): Cell {
             if (!row.containsKey(field))
-                throw RuntimeException("no column named $field (columns: ${row.keys.joinToString(",")})")
+                throw ColumnNotFoundException(field, row.keys.toList())
             return row[field]!!
         }
     }
@@ -62,26 +62,14 @@ sealed class Expression {
         override fun eval(row: Map<String, Cell>): Cell {
             val leftResult = left.eval(row)
             val rightResult = right.eval(row)
-            if (leftResult !is BooleanCell) {
-                throw RuntimeException("left operand of AND should be boolean (got ${className(left)})")
-            }
-            if (rightResult !is BooleanCell) {
-                throw RuntimeException("right operand of AND should be boolean (got ${className(right)})")
-            }
-            return BooleanCell(leftResult.v && rightResult.v)
+            return leftResult and rightResult
         }
     }
     data class Or(val left: Expression, val right: Expression): Expression() {
         override fun eval(row: Map<String, Cell>): Cell {
             val leftResult = left.eval(row)
             val rightResult = right.eval(row)
-            if (leftResult !is BooleanCell) {
-                throw RuntimeException("left operand of OR should be boolean (got ${className(left)})")
-            }
-            if (rightResult !is BooleanCell) {
-                throw RuntimeException("right operand of OR should be boolean (got ${className(right)})")
-            }
-            return BooleanCell(leftResult.v || rightResult.v)
+            return leftResult or rightResult
         }
     }
     data class Comparison(val left: Expression, val op: String, val right: Expression): Expression() {
@@ -89,15 +77,16 @@ sealed class Expression {
             val leftResult = left.eval(row)
             val rightResult = right.eval(row)
 
+            val compareResult = leftResult.compareTo(rightResult)
             return BooleanCell(when (op) {
-                "=" -> leftResult.compareTo(rightResult) == 0
-                "!=" -> leftResult.compareTo(rightResult) != 0
-                "<>" -> leftResult.compareTo(rightResult) != 0
-                "<" -> leftResult < rightResult
-                "<=" -> leftResult <= rightResult
-                ">" -> leftResult > rightResult
-                ">=" -> leftResult >= rightResult
-                else -> throw RuntimeException("invalid operator: $op")
+                "=" -> compareResult == 0
+                "!=" -> compareResult != 0
+                "<>" -> compareResult != 0
+                "<" -> compareResult < 0
+                "<=" -> compareResult <= 0
+                ">" -> compareResult > 0
+                ">=" -> compareResult >= 0
+                else -> throw HQLQueryException("invalid operator: $op")
             })
         }
     }

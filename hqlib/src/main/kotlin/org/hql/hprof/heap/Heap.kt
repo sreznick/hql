@@ -1,37 +1,56 @@
 package org.hql.hprof.heap
 
+import org.hql.ClassNotFoundException
+import org.hql.hprof.heap.Instance.BooleanI
+import org.hql.hprof.heap.Instance.ByteI
+import org.hql.hprof.heap.Instance.CharI
+import org.hql.hprof.heap.Instance.DoubleI
+import org.hql.hprof.heap.Instance.FloatI
+import org.hql.hprof.heap.Instance.IntI
+import org.hql.hprof.heap.Instance.LongI
+import org.hql.hprof.heap.Instance.ShortI
 import org.hql.hprof.reader.BasicValue
 import org.hql.hprof.reader.Hprof
 import org.hql.hprof.reader.InstanceInternal
 import kotlin.collections.forEach
-import kotlin.collections.get
+
+private fun primitiveToInstance(v: BasicValue.Primitive) = when (v) {
+    is BasicValue.IntV -> IntI(v.v)
+    is BasicValue.LongV -> LongI(v.v)
+    is BasicValue.FloatV -> FloatI(v.v)
+    is BasicValue.DoubleV -> DoubleI(v.v)
+    is BasicValue.BooleanV -> BooleanI(v.v)
+    is BasicValue.ByteV -> ByteI(v.v)
+    is BasicValue.ShortV -> ShortI(v.v)
+    is BasicValue.CharV -> CharI(v.v)
+}
 
 class Heap(private val hprof: Hprof) {
     private val classes: Map<String, Class>
     private val instances: Map<Identifier, Instance>
 
     init {
-        val classes = mutableMapOf<Identifier, Class>()
+        val classesById = mutableMapOf<Identifier, Class>()
         val objects = mutableMapOf<Identifier, Instance>()
-        val instances = hprof.getAllInstances()
+        val instancesInternal = hprof.getAllInstances()
 
         fun fillInstances(id: Identifier): Instance {
             if (id.isNull())
-                return Instance.NullI()
-            if (objects.contains(id))
-                return objects[id]!!
-            if (id !in instances) {
-                println("warning: couldn't find instance with id $id, returning null")
-                return Instance.NullI()
+                return Instance.NullI
+            if (id in objects)
+                return objects.getValue(id)
+            if (id !in instancesInternal) {
+                System.err.println("warning: couldn't find instance with id $id, returning null")
+                return Instance.NullI
             }
-            val x = instances[id]!!
+            val x = instancesInternal.getValue(id)
 
             when (x) {
                 is InstanceInternal.Object -> {
                     if (objects.containsKey(id))
-                        return objects[id]!!
+                        return objects.getValue(id)
 
-                    val classObj = classes[x.classId]!!
+                    val classObj = classesById.getValue(x.classId)
                     if (classObj.getName() == "java.lang.String") {
                         val fieldValue = x.fieldValues.values.first() as BasicValue.Object
                         val contentsI = fillInstances(fieldValue.id) as Instance.ArrayI
@@ -42,8 +61,7 @@ class Heap(private val hprof: Hprof) {
                         return inst
                     }
 
-                    val inst = Instance.ObjectI()
-                    inst.setClass(classObj)
+                    val inst = Instance.ObjectI(classObj)
                     classObj.addInstance(inst)
                     objects[id] = inst
                     x.fieldValues.forEach { (fieldId, value) ->
@@ -51,11 +69,11 @@ class Heap(private val hprof: Hprof) {
                         val fieldValue = when (value) {
                             is BasicValue.Object -> {
                                 if (value.id.isNull())
-                                    Instance.NullI()
+                                    Instance.NullI
                                 else
                                     fillInstances(value.id)
                             }
-                            is BasicValue.Primitive -> Instance.fromPrimitive(value)
+                            is BasicValue.Primitive -> primitiveToInstance(value)
                         }
                         inst.addField(fieldName, fieldValue)
                     }
@@ -72,7 +90,7 @@ class Heap(private val hprof: Hprof) {
                     val inst = Instance.ArrayI(
                         x.values.map {
                             when (it) {
-                                is BasicValue.Primitive -> Instance.fromPrimitive(it)
+                                is BasicValue.Primitive -> primitiveToInstance(it)
                                 else -> throw RuntimeException("object reference in PrimitiveArray")
                             }
                         }
@@ -87,29 +105,29 @@ class Heap(private val hprof: Hprof) {
             val classObj = Class(id)
             val className = hprof.getClassName(id)
             classObj.setName(className)
-            classes[id] = classObj
+            classesById[id] = classObj
             objects[id] = Instance.ClassI(classObj)
         }
 
-        instances.forEach { (id, _) ->
+        instancesInternal.forEach { (id, _) ->
             fillInstances(id)
         }
 
         hprof.getAllClasses().forEach { (id, cls) ->
-            val classObj = classes[id]!!
+            val classObj = classesById.getValue(id)
             classObj.setSuperclass(
-                if (cls.superclassId.isNull()) null else classes[cls.superclassId]!!
+                if (cls.superclassId.isNull()) null else classesById[cls.superclassId]!!
             )
             cls.staticFields.forEach { (fieldId, value) ->
                 val fieldName = hprof.getString(fieldId)
                 val fieldValue = when (value) {
                     is BasicValue.Object -> {
                         if (value.id.isNull())
-                            Instance.NullI()
+                            Instance.NullI
                         else
-                            objects[value.id]!!
+                            objects.getValue(value.id)
                     }
-                    is BasicValue.Primitive -> Instance.fromPrimitive(value)
+                    is BasicValue.Primitive -> primitiveToInstance(value)
                 }
                 classObj.addStaticField(fieldName, fieldValue)
             }
@@ -119,14 +137,11 @@ class Heap(private val hprof: Hprof) {
             }
         }
 
-        this.classes = classes.values.associateBy { it.getName() }
+        classes = classesById.values.associateBy { it.getName() }
         this.instances = objects
     }
 
-    fun getClasses() = classes.values.toList()
-    fun getClassByName(name: String) = classes[name]
-        ?: throw RuntimeException("no class with name $name")
-    fun getInstances() = instances.values.toList()
-    fun getInstancesById(id: Identifier) = instances[id]
-        ?: throw RuntimeException("no instance with id $id")
+    fun getClassByName(name: String) = classes.getOrElse(name) {
+        throw ClassNotFoundException(name)
+    }
 }

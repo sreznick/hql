@@ -1,29 +1,37 @@
 package org.hql.query
 
+import org.hql.IncompatibleTypesException
 import org.hql.hprof.heap.Class
 import org.hql.hprof.heap.Instance
-import kotlin.RuntimeException
 
 interface Cell : Comparable<Cell> {
-    fun type(): String
+    val type: String
+        get() = throw UnsupportedOperationException()
+
     override fun compareTo(other: Cell): Int {
-        throw RuntimeException("comparing instances of type ${type()} and ${other.type()} is not supported")
+        throw IncompatibleTypesException("comparing instances", type, other.type)
     }
     operator fun plus(other: Cell): Cell {
-        throw RuntimeException("adding instances of type ${type()} and ${other.type()} is not supported")
+        throw IncompatibleTypesException("adding instances", type, other.type)
     }
     operator fun minus(other: Cell): Cell {
-        throw RuntimeException("subtracting instances of type ${type()} and ${other.type()} is not supported")
+        throw IncompatibleTypesException("subtracting instances", type, other.type)
     }
     operator fun times(other: Cell): Cell {
-        throw RuntimeException("multiplying instances of type ${type()} and ${other.type()} is not supported")
+        throw IncompatibleTypesException("multiplying instances", type, other.type)
     }
     operator fun div(other: Cell): Cell {
-        throw RuntimeException("dividing instances of type ${type()} and ${other.type()} is not supported")
+        throw IncompatibleTypesException("dividing instances", type, other.type)
+    }
+    infix fun and(other: Cell): Cell {
+        throw IncompatibleTypesException("AND operation", type, other.type)
+    }
+    infix fun or(other: Cell): Cell {
+        throw IncompatibleTypesException("OR operation", type, other.type)
     }
 
     fun access(field: String): Cell {
-        throw RuntimeException("accessing a field $field of type ${type()} is not supported")
+        throw IncompatibleTypesException("accessing a field $field", type)
     }
 
     companion object {
@@ -38,7 +46,7 @@ interface Cell : Comparable<Cell> {
                 is Instance.FloatI -> FloatCell(instance.v.toDouble())
                 is Instance.IntI -> IntCell(instance.v.toLong())
                 is Instance.LongI -> IntCell(instance.v)
-                is Instance.NullI -> NullCell()
+                is Instance.NullI -> NullCell
                 is Instance.ObjectI -> ObjectCell(instance)
                 is Instance.ShortI -> IntCell(instance.v.toLong())
                 is Instance.StringI -> StringCell(instance.value)
@@ -46,8 +54,8 @@ interface Cell : Comparable<Cell> {
     }
 }
 
-class NullCell : Cell {
-    override fun type(): String = "null"
+data object NullCell : Cell {
+    override val type: String = "null"
     override fun toString() = "null"
     override fun compareTo(other: Cell): Int {
         if (other is NullCell) return 0
@@ -56,16 +64,24 @@ class NullCell : Cell {
 }
 
 class BooleanCell(val v: Boolean) : Cell {
-    override fun type(): String = "boolean"
+    override val type: String = "boolean"
     override fun toString() = "$v"
     override fun compareTo(other: Cell): Int {
         if (other is BooleanCell) return v.compareTo(other.v)
         return super.compareTo(other)
     }
+    override fun and(other: Cell): Cell {
+        if (other is BooleanCell) return BooleanCell(v && other.v)
+        return super.and(other)
+    }
+    override fun or(other: Cell): Cell {
+        if (other is BooleanCell) return BooleanCell(v || other.v)
+        return super.and(other)
+    }
 }
 
 data class CharCell(val v: Char) : Cell {
-    override fun type(): String = "char"
+    override val type: String = "char"
     override fun toString() = "$v"
     override fun compareTo(other: Cell): Int {
         if (other is CharCell) return v.compareTo(other.v)
@@ -84,7 +100,7 @@ data class CharCell(val v: Char) : Cell {
 }
 
 data class FloatCell(val v: Double) : Cell {
-    override fun type(): String = "float"
+    override val type: String = "float"
     override fun toString() = "$v"
     override fun compareTo(other: Cell): Int {
         if (other is IntCell) return v.compareTo(other.v)
@@ -114,7 +130,7 @@ data class FloatCell(val v: Double) : Cell {
 }
 
 data class IntCell(val v: Long) : Cell {
-    override fun type(): String = "int"
+    override val type: String = "int"
     override fun toString() = "$v"
     override fun compareTo(other: Cell): Int {
         if (other is IntCell) return v.compareTo(other.v)
@@ -144,15 +160,15 @@ data class IntCell(val v: Long) : Cell {
 }
 
 data class ArrayCell(val instance: Instance.ArrayI) : Cell {
+    override val type: String = if (instance.values.isEmpty()) "[]" else "[${this[0].type}]"
     operator fun get(i: Int) = Cell.fromInstance(instance.values[i])
-    override fun type(): String = if (instance.values.isEmpty()) "[]" else "[${this[0].type()}]"
     override fun toString() = instance.values.indices
         .map { i -> this[i] }
         .joinToString(prefix = "[", postfix = "]")
 }
 
 data class StringCell(val value: String) : Cell {
-    override fun type(): String = "string"
+    override val type: String = "string"
     override fun toString() = "\"$value\""
     override fun compareTo(other: Cell): Int {
         if (other is StringCell) return value.compareTo(other.value)
@@ -170,7 +186,7 @@ data class StringCell(val value: String) : Cell {
 }
 
 data class ClassCell(val cls: Class) : Cell {
-    override fun type(): String = "class"
+    override val type: String = "class"
     override fun toString() = "<class object ${cls.getName()}>"
     override fun compareTo(other: Cell): Int {
         if (other is ClassCell) return cls.id.compareTo(other.cls.id)
@@ -179,7 +195,7 @@ data class ClassCell(val cls: Class) : Cell {
 }
 
 class ObjectCell(val obj: Instance.ObjectI) : Cell {
-    override fun type() = obj.getClass().getName()
-    override fun toString() = "<instance of class ${type()}>"
+    override val type: String = obj.getClass().getName()
+    override fun toString() = "<instance of class $type>"
     override fun access(field: String): Cell = Cell.fromInstance(obj[field])
 }

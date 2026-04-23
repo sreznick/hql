@@ -7,11 +7,7 @@ class Database(val heap: Heap) {
     val tables = hashMapOf<String, HprofTable>()
 
     fun createTable(name: String): HprofTable {
-        val cls = try {
-            heap.getClassByName(name)
-        } catch (_: NullPointerException) {
-            throw RuntimeException("no such class: $name")
-        }
+        val cls = heap.getClassByName(name)
         return HprofTable(
             cls.getInstanceFieldTypes().map { it.key }.toList(),
             cls.getInstances().map { instance ->
