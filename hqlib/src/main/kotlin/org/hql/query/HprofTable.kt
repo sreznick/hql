@@ -1,30 +1,23 @@
 package org.hql.query
 
-import org.hql.hprof.heap.Class
-import org.hql.hprof.heap.Heap
-import org.hql.hprof.heap.Instance
 import org.hql.query.expressions.Expression
 import kotlin.math.max
 
-class HprofTable(private val heap: Heap, className: String) {
-    private val cls: Class
-    private val fieldNames: Set<String>
-    private val instances: List<Instance>
-
-    init {
-        try {
-            cls = heap.getClassByName(className)
-        } catch (_: NullPointerException) {
-            throw RuntimeException("no such class: $className")
+class HprofTable(
+    private val columns: List<String>,
+    private val rows: List<Map<String, Cell>>
+) {
+    fun print() {
+        val values = columns.map { column ->
+            rows.map { instance ->
+                instance[column].toString()
+            }
         }
-        fieldNames = cls.getInstanceFieldTypes().map { it.key }.toSet()
-        instances = cls.getInstances()
-    }
 
-    private fun printTable(columns: List<String>, values: List<List<String>>) {
         val cols = columns.size
+        if (cols == 0) return
         val rows = values[0].size
-        if (cols == 0 || rows == 0) return
+        if (rows == 0) return
         val lengths = (0..<cols).map { i ->
             max(values[i].maxOf { it.length }, columns[i].length)
         }
@@ -46,50 +39,43 @@ class HprofTable(private val heap: Heap, className: String) {
         }
     }
 
-    fun select(
-        columns: List<Expression>,
-        columnNames: List<String>,
-        filter: Expression? = null,
-        sort: Expression? = null,
-        sortDescending: Boolean = false,
-        limit: Int? = null,
-        offset: Int? = null
-    ) {
-        val columns_ = columns.ifEmpty { fieldNames.map { Expression.Field(it) } }
-        val columnsAsText_ = columnNames.ifEmpty { fieldNames.toList() }
+    fun select(columns: List<Expression>, columnNames: List<String>): HprofTable {
+        val processedRows = rows.map { instance ->
+            val newRow = mutableMapOf<String, Cell>()
+            instance.forEach { (name, cell) ->
+                newRow[name] = cell
+            }
+            columns.zip(columnNames).forEach { (expr, name) ->
+                newRow[name] = expr.eval(instance)
+            }
+            newRow.toMap()
+        }
+        return HprofTable(columnNames, processedRows)
+    }
 
-        var processedInstances = instances
-        filter?.let {
-            processedInstances = processedInstances.filter { instance ->
-                val result = filter.eval(instance)
-                if (result !is Boolean)
-                    throw RuntimeException("result of a filter expression should be boolean")
-                result
-            }
+    fun filter(filter: Expression): HprofTable {
+        val processedInstances = rows.filter { instance ->
+            val result = filter.eval(instance)
+            if (result !is BooleanCell)
+                throw RuntimeException("result of a filter expression should be boolean")
+            result.v
         }
-        sort?.let {
-            val selector: (Instance) -> Comparable<Any?> = { instance ->
-                val result = sort.eval(instance)
-                val comparable = result as? Comparable<Any?>
-                    ?: throw RuntimeException("result (type ${if (result == null) null else result::class.simpleName}) is not comparable")
-                comparable
-            }
-            processedInstances =
-                if (sortDescending) processedInstances.sortedByDescending(selector)
-                else                processedInstances.sortedBy(selector)
-        }
-        offset?.let {
-            processedInstances = processedInstances.drop(offset)
-        }
-        limit?.let {
-            processedInstances = processedInstances.take(limit)
-        }
+        return HprofTable(columns, processedInstances)
+    }
 
-        val values = columns_.map { column ->
-            processedInstances.map { instance ->
-                column.eval(instance).toString()
-            }
-        }
-        printTable(columnsAsText_, values)
+    fun sort(sort: Expression, sortDescending: Boolean = false): HprofTable {
+        val selector = { row: Map<String, Cell> -> sort.eval(row) }
+        val processedInstances =
+            if (sortDescending) rows.sortedByDescending(selector)
+            else                rows.sortedBy(selector)
+        return HprofTable(columns, processedInstances)
+    }
+
+    fun offset(offset: Int): HprofTable {
+        return HprofTable(columns, rows.drop(offset))
+    }
+
+    fun limit(limit: Int): HprofTable {
+        return HprofTable(columns, rows.take(limit))
     }
 }

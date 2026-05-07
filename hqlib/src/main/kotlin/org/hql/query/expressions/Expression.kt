@@ -1,130 +1,93 @@
 package org.hql.query.expressions
 
-import org.hql.hprof.heap.Instance
-
-private fun className(x: Any?) = if (x == null) "null" else x::class.simpleName
+import org.hql.ColumnNotFoundException
+import org.hql.HQLQueryException
+import org.hql.query.BooleanCell
+import org.hql.query.Cell
 
 sealed class Expression {
-    abstract fun eval(instance: Instance): Any?
+    abstract fun eval(row: Map<String, Cell>): Cell
 
-    data class Literal(val value: Any?): Expression() {
-        override fun eval(instance: Instance) = value
+    data class Literal(val value: Cell): Expression() {
+        override fun eval(row: Map<String, Cell>) = value
     }
 
     data class Field(val field: String): Expression() {
-        override fun eval(instance: Instance) = instance[field]
+        override fun eval(row: Map<String, Cell>): Cell {
+            if (!row.containsKey(field))
+                throw ColumnNotFoundException(field, row.keys.toList())
+            return row[field]!!
+        }
     }
 
     data class Access(val expr: Expression, val field: String): Expression() {
-        override fun eval(instance: Instance): Any? {
-            val exprResult = expr.eval(instance)
-                ?: throw RuntimeException("trying to access $field of null")
-            if (exprResult !is Instance)
-                throw RuntimeException("trying to access $field of a value of type ${className(exprResult)}")
-            return exprResult[field]
+        override fun eval(row: Map<String, Cell>): Cell {
+            val exprResult = expr.eval(row)
+            return exprResult.access(field)
         }
     }
 
     data class Plus(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-
-            if (leftResult is String && rightResult is String)
-                return leftResult + rightResult
-            if (leftResult is Number && rightResult is Number)
-                return leftResult.toDouble() + rightResult.toDouble()
-
-            throw RuntimeException("adding values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+        override fun eval(row: Map<String, Cell>): Cell  {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult + rightResult
         }
     }
 
     data class Minus(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-
-            if (leftResult is Number && rightResult is Number)
-                return leftResult.toDouble() - rightResult.toDouble()
-            throw RuntimeException("subtracting values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult - rightResult
         }
     }
     data class Mult(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-
-            if (leftResult is Number && rightResult is Number)
-                return leftResult.toDouble() * rightResult.toDouble()
-            throw RuntimeException("multiplying values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult * rightResult
         }
     }
 
     data class Div(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-
-            if (leftResult is Number && rightResult is Number)
-                return leftResult.toDouble() / rightResult.toDouble()
-            throw RuntimeException("dividing values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult / rightResult
         }
     }
 
     data class And(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-            if (leftResult !is Boolean) {
-                throw RuntimeException("left operand of AND should be boolean (got ${className(left)})")
-            }
-            if (rightResult !is Boolean) {
-                throw RuntimeException("right operand of AND should be boolean (got ${className(right)})")
-            }
-            return leftResult && rightResult
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult and rightResult
         }
     }
     data class Or(val left: Expression, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
-            if (leftResult !is Boolean) {
-                throw RuntimeException("left operand of OR should be boolean (got ${className(left)})")
-            }
-            if (rightResult !is Boolean) {
-                throw RuntimeException("right operand of OR should be boolean (got ${className(right)})")
-            }
-            return leftResult || rightResult
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
+            return leftResult or rightResult
         }
     }
     data class Comparison(val left: Expression, val op: String, val right: Expression): Expression() {
-        override fun eval(instance: Instance): Any {
-            val leftResult = left.eval(instance)
-            val rightResult = right.eval(instance)
+        override fun eval(row: Map<String, Cell>): Cell {
+            val leftResult = left.eval(row)
+            val rightResult = right.eval(row)
 
-            if (leftResult is Number && rightResult is Number) {
-                return when (op) {
-                    "=" -> leftResult.toDouble() == rightResult.toDouble()
-                    "!=" -> leftResult.toDouble() != rightResult.toDouble()
-                    "<>" -> leftResult.toDouble() != rightResult.toDouble()
-                    "<" -> leftResult.toDouble() < rightResult.toDouble()
-                    "<=" -> leftResult.toDouble() <= rightResult.toDouble()
-                    ">" -> leftResult.toDouble() > rightResult.toDouble()
-                    ">=" -> leftResult.toDouble() >= rightResult.toDouble()
-                    else -> throw RuntimeException("invalid operator: $op")
-                }
-            }
-            throw RuntimeException("comparing values of type " +
-                    "${className(leftResult)} and ${className(rightResult)} " +
-                    "is not supported")
+            val compareResult = leftResult.compareTo(rightResult)
+            return BooleanCell(when (op) {
+                "=" -> compareResult == 0
+                "!=" -> compareResult != 0
+                "<>" -> compareResult != 0
+                "<" -> compareResult < 0
+                "<=" -> compareResult <= 0
+                ">" -> compareResult > 0
+                ">=" -> compareResult >= 0
+                else -> throw HQLQueryException("invalid operator: $op")
+            })
         }
     }
 }

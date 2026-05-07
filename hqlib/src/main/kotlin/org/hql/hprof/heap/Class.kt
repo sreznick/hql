@@ -1,35 +1,41 @@
 package org.hql.hprof.heap
 
-class Class(val id: Identifier) {
-    private var name: String? = null
-    private var superclass: Class? = null
-    private val staticFields = mutableMapOf<String, Any?>()
-    private val instanceFieldTypes = mutableMapOf<String, BasicType>()
-    private val instances = mutableListOf<Instance>()
+import org.hql.hprof.heap.Instance.ObjectI
+import org.hql.hprof.reader.BasicType
+import org.hql.hprof.reader.ClassInternal
+import org.hql.hprof.reader.Hprof
 
-    /* functions intended for use only during construction */
-    internal fun setName(name: String) {
-        this.name = name
-    }
-    internal fun setSuperclass(superclass: Class?) {
-        this.superclass = superclass
-    }
-    internal fun addStaticField(name: String, value: Any?) {
-        this.staticFields[name] = value
-    }
-    internal fun addInstanceFieldType(name: String, type: BasicType) {
-        this.instanceFieldTypes[name] = type
-    }
-    internal fun addInstance(instance: Instance) {
-        instances.add(instance)
+class Class(private val hprof: Hprof, private val cls: ClassInternal) {
+    val id: Identifier = cls.id
+
+    val name: String by lazy {
+        hprof.getClassName(cls.id)
     }
 
-    override fun toString() = "<Class ${getName()}>"
+    val superclass: Class? by lazy {
+        if (cls.superclassId.isNull())
+            null
+        else Class(hprof, hprof.getClassById(cls.superclassId))
+    }
 
-    fun getName() = name!!
-    fun getSuperclass() = superclass
-    fun getStaticFields() = staticFields.toMap()
-    fun getInstanceFieldTypes() = instanceFieldTypes.toMap()
-    fun getInstances() = instances.toList()
+    val instanceFieldTypes: Map<String, BasicType> by lazy {
+        cls.instanceFieldTypes.associate { (fieldId, value) ->
+            hprof.getString(fieldId) to value
+        }
+    }
+
+    val staticFields: Map<String, Instance> by lazy {
+        cls.staticFields
+            .mapKeys { (fieldId, _) -> hprof.getString(fieldId) }
+            .mapValues { (_, inst) -> Instance.create(hprof, inst) }
+    }
+
+    val instances: List<ObjectI> by lazy {
+        hprof.getInstancesOfClass(cls.id).map {
+            Instance.createObject(hprof, it.id) as ObjectI
+        }.toList()
+    }
+
+    override fun toString() = "<Class $name>"
     operator fun get(name: String) = staticFields.getValue(name)
 }

@@ -19,7 +19,6 @@ class Identifier(private val value: ByteArray): Comparable<Identifier> {
 
     fun isNull() = value.all { it == 0.toByte() }
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun toString(): String {
         return value.joinToString(separator = " ") { it.toUByte().toHexString() }
     }

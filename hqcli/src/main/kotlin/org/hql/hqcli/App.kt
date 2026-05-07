@@ -1,8 +1,11 @@
 package org.hql.hqcli
 
+import org.hql.HQLException
 import org.hql.hprof.heap.Heap
+import org.hql.hprof.reader.HprofReader
 import org.hql.query.Database
 import org.hql.query.ast.QueryAST
+import java.io.File
 
 fun main(args: Array<String>) {
     if (args.isEmpty()) {
@@ -22,7 +25,10 @@ fun main(args: Array<String>) {
     }.filter { it.isNotBlank() }
 
     println("Running HQL CLI...\n")
-    val heap = Heap(path)
+    val reader = File(path).inputStream().use { stream ->
+        HprofReader(stream)
+    }
+    val heap = Heap(reader.getHprof())
     val db = Database(heap)
 
     for ((i, query) in queries.withIndex()) {
@@ -38,8 +44,10 @@ fun main(args: Array<String>) {
             println("-".repeat(40) + "\n")
             println("Query results:")
             db.query(query)
+        } catch (e: HQLException) {
+            println("Error: ${e.message}")
         } catch (e: Exception) {
-            println("ERROR parsing query: ${e.message}")
+            println("Uncaught error parsing query: ${e.message}")
             e.printStackTrace()
         }
         println("-".repeat(40) + "\n")
