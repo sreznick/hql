@@ -19,8 +19,19 @@ class Identifier(private val value: ByteArray): Comparable<Identifier> {
 
     fun isNull() = value.all { it == 0.toByte() }
 
-    @OptIn(ExperimentalStdlibApi::class)
     override fun toString(): String {
         return value.joinToString(separator = " ") { it.toUByte().toHexString() }
+    }
+
+    fun toCompactHex(): String {
+        if (value.isEmpty()) return "0"
+
+        val sb = StringBuilder(value.size * 2)
+        for (b in value) {
+            sb.append("%02x".format(b))
+        }
+
+        val result = sb.toString().trimStart('0')
+        return result.ifEmpty { "0" }
     }
 }

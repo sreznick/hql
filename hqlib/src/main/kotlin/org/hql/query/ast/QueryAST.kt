@@ -4,6 +4,11 @@ import org.antlr.v4.runtime.CharStreams
 import org.antlr.v4.runtime.CommonTokenStream
 import org.hql.ExprLexer
 import org.hql.ExprParser
+import org.hql.query.BooleanCell
+import org.hql.query.FloatCell
+import org.hql.query.IntCell
+import org.hql.query.NullCell
+import org.hql.query.StringCell
 import org.hql.query.expressions.Expression
 
 // Рекурсивная функция для рисования дерева логики
@@ -173,19 +178,19 @@ data class QueryAST(
             return when (ctx) {
                 // Случай: литералы
                 is ExprParser.BoolLiteralExprContext -> {
-                    Expression.Literal(ctx.text.toBooleanStrict())
+                    Expression.Literal(BooleanCell(ctx.text.toBooleanStrict()))
                 }
                 is ExprParser.IntLiteralExprContext -> {
-                    Expression.Literal(ctx.text.toLong())
+                    Expression.Literal(IntCell(ctx.text.toLong()))
                 }
                 is ExprParser.FloatLiteralExprContext -> {
-                    Expression.Literal(ctx.text.toDouble())
+                    Expression.Literal(FloatCell(ctx.text.toDouble()))
                 }
                 is ExprParser.StringLiteralExprContext -> {
-                    Expression.Literal(ctx.text.drop(1).dropLast(1))
+                    Expression.Literal(StringCell(ctx.text.drop(1).dropLast(1)))
                 }
                 is ExprParser.NullLiteralExprContext -> {
-                    Expression.Literal(null)
+                    Expression.Literal(NullCell)
                 }
 
                 // Случай: имя переменной
