@@ -1,6 +1,7 @@
 package org.hql.hprof.heap
 
-import org.hql.hprof.heap.Instance.ObjectI
+import org.hql.hprof.heap.instances.Instance
+import org.hql.hprof.heap.instances.Instance.ObjectI
 import org.hql.hprof.reader.BasicType
 import org.hql.hprof.reader.ClassInternal
 import org.hql.hprof.reader.Hprof
