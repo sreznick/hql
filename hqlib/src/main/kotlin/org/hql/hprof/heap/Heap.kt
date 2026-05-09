@@ -14,4 +14,6 @@ class Heap(private val hprof: Hprof) {
     fun getClassByName(name: String) = classes.getOrElse(name) {
         throw ClassNotFoundException(name)
     }
+
+    fun findClassByName(name: String): Class? = classes[name]
 }

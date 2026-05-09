@@ -15,8 +15,6 @@ class CoroutineTable(heap: Heap) : Table {
     // converted coroutine rows to internal format from found coroutines in the dump
     private val rows = CoroutineHeapSearcher(heap).findAll()
 
-    private val printer = CoroutineTablePrinter()
-
     private val resolver = CoroutineColumnResolver()
 
     override fun select(
@@ -55,7 +53,7 @@ class CoroutineTable(heap: Heap) : Table {
             processedRows = processedRows.take(limit)
         }
 
-        printer.print(processedRows, columnNames, resolver::resolve)
+        CoroutineTablePrinter.print(processedRows, columnNames, resolver::resolve)
     }
 
     //comment for later removal: сейчас не работают and и or из-за неправильных приоритетов в парсере

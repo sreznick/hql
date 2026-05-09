@@ -11,11 +11,19 @@ import org.hql.hprof.heap.instances.coroutines.enums.Dispatcher
 import org.hql.hprof.heap.instances.coroutines.enums.JobType
 
 /**
- * Maps raw heap instances related to coroutines and jobs into coroutine models
+ * Builds [CoroutineRow] models from raw heap instances.
  */
-object CoroutineInstanceMapper {
+interface CoroutineMapper {
+    operator fun invoke(instance: Instance.ObjectI, clsName: String): CoroutineRow
+}
 
-    fun getCoroutineRow(instance: Instance.ObjectI, clsName: String) = instance.buildCoroutineRow(clsName)
+/**
+ * Default [CoroutineMapper] that maps raw heap instances related to coroutines and jobs into coroutine models
+ */
+object CoroutineInstanceMapper : CoroutineMapper {
+
+    override operator fun invoke(instance: Instance.ObjectI, clsName: String): CoroutineRow =
+        instance.buildCoroutineRow(clsName)
 
     private fun Instance.ObjectI.buildCoroutineRow(clsName: String) = CoroutineRow(
         instance = this,
@@ -25,17 +33,13 @@ object CoroutineInstanceMapper {
         contextInfo = this.toContextInfo()
     )
 
-    private fun Instance.ObjectI.buildJobRow(): JobRow? {
-        val type = toJobType() ?: return null
-        return JobRow(this, type)
-    }
+    private fun Instance.ObjectI.buildJobRow(): JobRow? =
+        toJobType()?.let { JobRow(this, it) }
 
-    private fun Instance.ObjectI.toJobType(): JobType? {
-        return if (cls.name == "kotlinx.coroutines.JobImpl") {
-            JobType.JOB
-        } else if (cls.name == "kotlinx.coroutines.SupervisorJobImpl") {
-            JobType.SUPERVISOR_JOB
-        } else null
+    private fun Instance.ObjectI.toJobType(): JobType? = when (cls.name) {
+        "kotlinx.coroutines.JobImpl" -> JobType.JOB
+        "kotlinx.coroutines.SupervisorJobImpl" -> JobType.SUPERVISOR_JOB
+        else -> null
     }
 
     private fun Instance.ObjectI?.toParentRow(): CoroutineParentRow? {
@@ -68,13 +72,11 @@ object CoroutineInstanceMapper {
         }
     }
 
-    private fun String.toCoroutineType(): CoroutineType {
-        return when (this) {
-            "kotlinx.coroutines.BlockingCoroutine" -> CoroutineType.BLOCKING
-            "kotlinx.coroutines.LazyStandaloneCoroutine" -> CoroutineType.LAZY_STANDALONE
-            "kotlinx.coroutines.internal.ScopeCoroutine" -> CoroutineType.SCOPE
-            else -> CoroutineType.STANDALONE
-        }
+    private fun String.toCoroutineType(): CoroutineType = when (this) {
+        "kotlinx.coroutines.BlockingCoroutine" -> CoroutineType.BLOCKING
+        "kotlinx.coroutines.LazyStandaloneCoroutine" -> CoroutineType.LAZY_STANDALONE
+        "kotlinx.coroutines.internal.ScopeCoroutine" -> CoroutineType.SCOPE
+        else -> CoroutineType.STANDALONE
     }
 
     private fun Instance.ObjectI.toContextInfo(): CoroutineContextInfo {
@@ -123,10 +125,8 @@ object CoroutineInstanceMapper {
         return CoroutineContextInfo(job, dispatcher, name)
     }
 
-    private fun Instance.ObjectI.toDispatcher(): Dispatcher {
-        return when (cls.name) {
-            "kotlinx.coroutines.scheduling.DefaultIoScheduler" -> Dispatcher.IO
-            else -> Dispatcher.DEFAULT
-        }
+    private fun Instance.ObjectI.toDispatcher(): Dispatcher = when (cls.name) {
+        "kotlinx.coroutines.scheduling.DefaultIoScheduler" -> Dispatcher.IO
+        else -> Dispatcher.DEFAULT
     }
 }

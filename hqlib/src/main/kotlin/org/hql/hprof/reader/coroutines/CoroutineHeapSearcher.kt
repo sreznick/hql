@@ -8,33 +8,21 @@ import org.hql.hprof.heap.instances.coroutines.CoroutineRow
  */
 class CoroutineHeapSearcher(
     private val heap: Heap,
-    private val mapper: CoroutineInstanceMapper = CoroutineInstanceMapper
+    private val mapper: CoroutineMapper = CoroutineInstanceMapper
 ) {
 
-    // available coroutine types to search in heap
-    private val coroutineClassNames = listOf(
-        "kotlinx.coroutines.BlockingCoroutine",
-        "kotlinx.coroutines.StandaloneCoroutine",
-        "kotlinx.coroutines.LazyStandaloneCoroutine",
-        "kotlinx.coroutines.internal.ScopeCoroutine"
-    )
+    fun findAll(): List<CoroutineRow> =
+        COROUTINE_CLASS_NAMES
+            .mapNotNull { heap.findClassByName(it) }
+            .flatMap { cls -> cls.instances.map { mapper(it, cls.name) } }
 
-    fun findAll(): List<CoroutineRow> {
-        val result = mutableListOf<CoroutineRow>()
-
-        for (className in coroutineClassNames) {
-            val cls = try {
-                heap.getClassByName(className)
-            } catch (_: Exception) {
-                // class is absent in heap
-                continue
-            }
-
-            for (instance in cls.instances) {
-                result += mapper.getCoroutineRow(instance, cls.name)
-            }
-        }
-
-        return result
+    companion object {
+        // available coroutine types to search in heap
+        private val COROUTINE_CLASS_NAMES = listOf(
+            "kotlinx.coroutines.BlockingCoroutine",
+            "kotlinx.coroutines.StandaloneCoroutine",
+            "kotlinx.coroutines.LazyStandaloneCoroutine",
+            "kotlinx.coroutines.internal.ScopeCoroutine"
+        )
     }
 }
