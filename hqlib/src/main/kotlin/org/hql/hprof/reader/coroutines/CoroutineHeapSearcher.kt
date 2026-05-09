@@ -30,8 +30,8 @@ class CoroutineHeapSearcher(
                 continue
             }
 
-            for (instance in cls.getInstances()) {
-                result += mapper.getCoroutineRow(instance, cls.getName())
+            for (instance in cls.instances) {
+                result += mapper.getCoroutineRow(instance, cls.name)
             }
         }
 

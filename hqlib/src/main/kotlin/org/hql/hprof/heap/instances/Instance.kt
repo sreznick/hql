@@ -61,7 +61,10 @@ sealed class Instance {
             val className = hprof.getClassName(inst.classId)
             return when (className) {
                 "java.lang.String" -> {
-                    val contentsAsBasicValue = inst.fieldValues.values.first() as BasicValue.Object
+                    val valueFieldId = hprof.getClassById(inst.classId).instanceFieldTypes
+                        .first { (nameId, _) -> hprof.getString(nameId) == "value" }
+                        .first
+                    val contentsAsBasicValue = inst.fieldValues.getValue(valueFieldId) as BasicValue.Object
                     val contentsAsArray = hprof.getInstanceById(contentsAsBasicValue.id) as InstanceInternal.PrimitiveArray
                     val contents = contentsAsArray.values.map { (it as BasicValue.ByteV).v }
                     val contentsAsString = contents.toByteArray().toString(Charsets.UTF_8)

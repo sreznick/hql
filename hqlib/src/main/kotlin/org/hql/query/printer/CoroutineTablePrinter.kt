@@ -28,8 +28,8 @@ class CoroutineTablePrinter {
 
     private fun format(value: Any?): String =
         when (value) {
-            // heap Instance values are rendered as their class names to avoid noisy object identity output
-            is Instance -> value.getClass().getName()
+            // heap object instances are rendered as their class names to avoid noisy object identity output
+            is Instance.ObjectI -> value.cls.name
             null -> "-"
             else -> value.toString()
         }

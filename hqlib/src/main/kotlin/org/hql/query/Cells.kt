@@ -2,7 +2,7 @@ package org.hql.query
 
 import org.hql.IncompatibleTypesException
 import org.hql.hprof.heap.Class
-import org.hql.hprof.heap.Instance
+import org.hql.hprof.heap.instances.Instance
 
 interface Cell : Comparable<Cell> {
     val type: String

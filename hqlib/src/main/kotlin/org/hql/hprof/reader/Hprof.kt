@@ -17,8 +17,9 @@ class Hprof {
     }
 
     fun addClassName(classId: Identifier, nameId: Identifier) {
-        if (classNames.containsKey(classId)) {
-            throw RuntimeException("Duplicate className '$classId' with value '$nameId'")
+        val existing = classNames[classId]
+        if (existing != null && existing != nameId) {
+            throw RuntimeException("Conflicting className '$classId': '$existing' vs '$nameId'")
         }
         classNames[classId] = nameId
     }

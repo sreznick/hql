@@ -3,6 +3,7 @@ package org.hql.query.tables
 import org.hql.hprof.heap.Heap
 import org.hql.hprof.heap.instances.coroutines.CoroutineRow
 import org.hql.hprof.reader.coroutines.CoroutineHeapSearcher
+import org.hql.query.StringCell
 import org.hql.query.Table
 import org.hql.query.expressions.Expression
 import org.hql.query.printer.CoroutineTablePrinter
@@ -77,7 +78,8 @@ class CoroutineTable(heap: Heap) : Table {
             is Expression.Comparison -> {
                 val l = resolve((left as Expression.Field).field).toString()
                 val r = (right as Expression.Literal).value
-                if (l == r) l else null
+                val rText = if (r is StringCell) r.value else r.toString()
+                if (l == rText) l else null
             }
 
             is Expression.Field -> resolve(field)
