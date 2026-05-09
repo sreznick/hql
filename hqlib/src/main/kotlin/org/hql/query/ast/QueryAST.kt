@@ -67,7 +67,7 @@ data class QueryAST(
     val columns: List<Expression> = emptyList(),
     val columnNames: List<String> = emptyList(),
     val filter: Expression? = null,
-    val orderBy: List<Pair<Expression, Boolean>> = emptyList(), // <sort, sortDescending>
+    val orderBy: List<Pair<Expression, SortOrder>> = emptyList(), // <sort, sortDescending>
     val limit: Int? = null,
     val offset: Int? = null
 ) {
@@ -86,9 +86,8 @@ data class QueryAST(
             println("NONE")
         } else {
             println()
-            orderBy.forEach { (expr, isDesc) ->
-                val dir = if (isDesc) "DESC" else "ASC"
-                println("      Direction: $dir")
+            orderBy.forEach { (expr, order) ->
+                println("      Direction: ${order.name}")
                 printTree(expr, indent = "      ")
             }
         }
@@ -150,15 +149,15 @@ data class QueryAST(
 
             // 6. Упорядочивание вывода ORDER BY
             val orderClauses = selectCtx.additionalClause().mapNotNull { it.orderClause() }
-            val orderByList = mutableListOf<Pair<Expression, Boolean>>()
+            val orderByList = mutableListOf<Pair<Expression, SortOrder>>()
 
             if (orderClauses.isNotEmpty()) {
                 val elements = orderClauses.single().orderList().orderElement()
 
                 elements.forEach { el ->
                     val expr = mapExpression(el.expression())
-                    val isDesc = el.DESC() != null
-                    orderByList.add(expr to isDesc)
+                    val order = if (el.DESC() != null) SortOrder.DESC else SortOrder.ASC
+                    orderByList.add(expr to order)
                 }
             }
 
