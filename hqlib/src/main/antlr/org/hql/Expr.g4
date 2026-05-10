@@ -25,18 +25,24 @@ limitClause : LIMIT count=INT_LITERAL ;
 
 offsetClause : OFFSET count=INT_LITERAL ;
 
-orderClause : ORDER_BY key=expression (ASC | DESC)? ;
+orderClause : (ORDER BY | ORDERBY) orderList ;
+
+orderList : orderElement (',' orderElement)* ;
+
+orderElement : expression (ASC | DESC)? ;
 
 expression
-    : left=expression op=ACCESS right=IDENTIFIER     # AccessExpr
+    : '(' expression ')'                             # ParenExpr
+    | left=expression op=ACCESS right=IDENTIFIER     # AccessExpr
     | left=expression op=STAR right=expression       # MultExpr
     | left=expression op=DIV right=expression        # DivExpr
     | left=expression op=PLUS right=expression       # PlusExpr
     | left=expression op=MINUS right=expression      # MinusExpr
+    | left=expression op=operator right=expression   # ConditionExpr
+
     | left=expression op=AND right=expression        # AndExpr
     | left=expression op=OR right=expression         # OrExpr
-    | left=expression op=operator right=expression   # ConditionExpr
-    | '(' expression ')'                             # ParenExpr
+
     | BOOL_LITERAL                                   # BoolLiteralExpr
     | INT_LITERAL                                    # IntLiteralExpr
     | FLOAT_LITERAL                                  # FloatLiteralExpr
@@ -57,7 +63,9 @@ WHERE  : 'WHERE'  | 'where' ;
 LIMIT  : 'LIMIT'  | 'limit' ;
 AS     : 'AS'     | 'as' ;
 OFFSET : 'OFFSET' | 'offset' ;
-ORDER_BY : 'ORDER BY' | 'order by' ;
+ORDER : 'ORDER' | 'order' ;
+BY    : 'BY'    | 'by' ;
+ORDERBY : 'ORDERBY' | 'orderby' ;
 ASC    : 'ASC'    | 'asc' ;
 DESC   : 'DESC'   | 'desc' ;
 

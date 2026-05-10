@@ -30,8 +30,7 @@ class Database(val heap: Heap) {
             columns = ast.columns,
             columnNames = ast.columnNames,
             filter = ast.filter,
-            sort = ast.sort,
-            sortDescending = ast.sortDescending,
+            orderBy = ast.orderBy,
             limit = ast.limit,
             offset = ast.offset
         )

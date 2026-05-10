@@ -5,6 +5,7 @@ import org.hql.query.Cell
 import org.hql.query.ResolverRow
 import org.hql.query.Row
 import org.hql.query.Table
+import org.hql.query.ast.SortOrder
 import org.hql.query.expressions.Expression
 import org.hql.query.printer.TablePrinter
 
@@ -27,8 +28,7 @@ abstract class AbstractTable<R> : Table {
         columns: List<Expression>,
         columnNames: List<String>,
         filter: Expression?,
-        sort: Expression?,
-        sortDescending: Boolean,
+        orderBy: List<Pair<Expression, SortOrder>>,
         limit: Int?,
         offset: Int?
     ) {
@@ -58,11 +58,22 @@ abstract class AbstractTable<R> : Table {
             }
         }
 
-        sort?.let { s ->
-            val selector = { row: Row -> s.eval(row) }
-            processed =
-                if (sortDescending) processed.sortedByDescending(selector)
-                else processed.sortedBy(selector)
+        if (orderBy.isNotEmpty()) {
+            processed = processed.sortedWith { a, b ->
+                for ((expr, order) in orderBy) {
+                    val valA = expr.eval(a)
+                    val valB = expr.eval(b)
+
+                    val res = valA.compareTo(valB)
+                    if (res != 0) {
+                        return@sortedWith when (order) {
+                            SortOrder.ASC -> res
+                            SortOrder.DESC -> -res
+                        }
+                    }
+                }
+                0
+            }
         }
 
         offset?.let { processed = processed.drop(it) }

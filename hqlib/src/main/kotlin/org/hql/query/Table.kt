@@ -1,5 +1,6 @@
 package org.hql.query
 
+import org.hql.query.ast.SortOrder
 import org.hql.query.expressions.Expression
 
 /**
@@ -12,8 +13,7 @@ interface Table {
         columns: List<Expression>,
         columnNames: List<String>,
         filter: Expression? = null,
-        sort: Expression? = null,
-        sortDescending: Boolean = false,
+        orderBy: List<Pair<Expression, SortOrder>> = emptyList(),
         limit: Int? = null,
         offset: Int? = null
     )
