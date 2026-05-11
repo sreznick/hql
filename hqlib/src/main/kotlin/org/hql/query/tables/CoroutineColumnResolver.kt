@@ -22,7 +22,6 @@ class CoroutineColumnResolver {
             "state" -> row.state.cell()
             "parent" -> row.parent?.instance?.id?.toCompactHex().toCell()
 
-            "job_type" -> row.contextInfo.job.cell()
             "dispatcher" -> row.contextInfo.dispatcher.cell()
             "name" -> row.contextInfo.name.toCell()
 

@@ -5,9 +5,9 @@ import org.hql.hprof.heap.instances.coroutines.enums.CoroutineState
 import org.hql.hprof.heap.instances.coroutines.enums.CoroutineType
 
 data class CoroutineRow(
-    override val instance: Instance.ObjectI,
+    val instance: Instance.ObjectI,
     val type: CoroutineType,
     val state: CoroutineState,
-    val parent: CoroutineParentRow?,
+    val parent: CoroutineRow?,
     val contextInfo: CoroutineContextInfo
-) : CoroutineParentRow(instance)
+)

@@ -5,5 +5,9 @@ enum class CoroutineType {
     BLOCKING,
     STANDALONE,
     LAZY_STANDALONE,
-    SCOPE
+    SCOPE,
+    JOB,
+    SUPERVISOR_JOB;
+
+    fun isJob() = this == JOB || this == SUPERVISOR_JOB
 }
