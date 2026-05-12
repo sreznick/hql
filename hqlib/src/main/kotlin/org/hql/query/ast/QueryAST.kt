@@ -59,6 +59,10 @@ private fun printTree(expr: Expression, indent: String) {
             printTree(expr.left, "$indent  |")
             printTree(expr.right, "$indent  |")
         }
+        is Expression.FunctionCall -> {
+            println("$indent[FUNCTION_CALL=${expr.name}]")
+            expr.args.forEach { printTree(it, "$indent  |") }
+        }
     }
 }
 
@@ -202,6 +206,15 @@ data class QueryAST(
                     Expression.Access(
                         expr = mapExpression(ctx.left),
                         field = ctx.right.text
+                    )
+                }
+
+                // Случай: name(arg1, arg2, ...)
+                is ExprParser.FunctionCallExprContext -> {
+                    val args = ctx.args?.expression()?.map { mapExpression(it) }.orEmpty()
+                    Expression.FunctionCall(
+                        name = ctx.name.text,
+                        args = args
                     )
                 }
 

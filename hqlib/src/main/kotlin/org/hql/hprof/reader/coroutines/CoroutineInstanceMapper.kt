@@ -2,13 +2,10 @@ package org.hql.hprof.reader.coroutines
 
 import org.hql.hprof.heap.instances.Instance
 import org.hql.hprof.heap.instances.coroutines.CoroutineContextInfo
-import org.hql.hprof.heap.instances.coroutines.CoroutineParentRow
 import org.hql.hprof.heap.instances.coroutines.CoroutineRow
-import org.hql.hprof.heap.instances.coroutines.JobRow
 import org.hql.hprof.heap.instances.coroutines.enums.CoroutineState
 import org.hql.hprof.heap.instances.coroutines.enums.CoroutineType
 import org.hql.hprof.heap.instances.coroutines.enums.Dispatcher
-import org.hql.hprof.heap.instances.coroutines.enums.JobType
 
 /**
  * Builds [CoroutineRow] models from raw heap instances.
@@ -25,48 +22,46 @@ object CoroutineInstanceMapper : CoroutineMapper {
     override operator fun invoke(instance: Instance.ObjectI, clsName: String): CoroutineRow =
         instance.buildCoroutineRow(clsName)
 
-    private fun Instance.ObjectI.buildCoroutineRow(clsName: String) = CoroutineRow(
-        instance = this,
-        type = clsName.toCoroutineType(),
-        state = (this["_state"] as? Instance.ObjectI).toCoroutineState(),
-        parent = (this["_parentHandle"] as? Instance.ObjectI).toParentRow(),
-        contextInfo = this.toContextInfo()
-    )
-
-    private fun Instance.ObjectI.buildJobRow(): JobRow? =
-        toJobType()?.let { JobRow(this, it) }
-
-    private fun Instance.ObjectI.toJobType(): JobType? = when (cls.name) {
-        "kotlinx.coroutines.JobImpl" -> JobType.JOB
-        "kotlinx.coroutines.SupervisorJobImpl" -> JobType.SUPERVISOR_JOB
-        else -> null
+    private fun Instance.ObjectI.buildCoroutineRow(clsName: String): CoroutineRow {
+        val type = clsName.toCoroutineType()
+        val stateInst = this["_state"] as? Instance.ObjectI
+        val asCoroutine = !type.isJob()
+        return CoroutineRow(
+            instance = this,
+            type = type,
+            state = stateInst.toCoroutineState(asCoroutine),
+            parent = (this["_parentHandle"] as? Instance.ObjectI).toParentRow(),
+            contextInfo = if (asCoroutine) this.toContextInfo() else CoroutineContextInfo()
+        )
     }
 
-    private fun Instance.ObjectI?.toParentRow(): CoroutineParentRow? {
+    private fun Instance.ObjectI?.toParentRow(): CoroutineRow? {
         return this?.takeIf { it.cls.name == "kotlinx.coroutines.ChildHandleNode" }
             ?.let { node ->
                 val parent = node["job"] as? Instance.ObjectI ?: return null
-                parent.buildJobRow() ?: parent.buildCoroutineRow(parent.cls.name)
+                parent.buildCoroutineRow(parent.cls.name)
             }
     }
 
-    private fun Instance.ObjectI?.toCoroutineState(): CoroutineState {
+    private fun Instance.ObjectI?.toCoroutineState(asCoroutine: Boolean): CoroutineState {
         if (this == null) return CoroutineState.UNKNOWN
 
         return when (cls.name) {
             "kotlinx.coroutines.ChildContinuation",
             "kotlinx.coroutines.CancellableContinuationImpl" ->
-                CoroutineState.SUSPENDED
+                if (asCoroutine) CoroutineState.SUSPENDED else CoroutineState.WAITING_CHILDREN
 
             "kotlinx.coroutines.Empty" -> CoroutineState.ACTIVE
 
             // comment for later removal: надо перепроверять, возможно это не 100% правда
             "kotlinx.coroutines.NodeList",
-            $$"kotlinx.coroutines.JobSupport$ChildCompletion" -> (this["_prev"] as? Instance.ObjectI).toCoroutineState()
-            "kotlinx.coroutines.ChildHandleNode" -> ((this["childJob"] as? Instance.ObjectI)?.get("_state") as? Instance.ObjectI).toCoroutineState()
+            $$"kotlinx.coroutines.JobSupport$ChildCompletion",
+            "kotlinx.coroutines.ResumeOnCompletion" ->
+                (this["_prev"] as? Instance.ObjectI).toCoroutineState(asCoroutine)
 
-            $$"kotlinx.coroutines.JobSupport$Finishing" ->
-                CoroutineState.WAITING_CHILDREN
+
+            "kotlinx.coroutines.ChildHandleNode",
+            $$"kotlinx.coroutines.JobSupport$Finishing" -> CoroutineState.WAITING_CHILDREN
 
             else -> CoroutineState.UNKNOWN
         }
@@ -76,6 +71,8 @@ object CoroutineInstanceMapper : CoroutineMapper {
         "kotlinx.coroutines.BlockingCoroutine" -> CoroutineType.BLOCKING
         "kotlinx.coroutines.LazyStandaloneCoroutine" -> CoroutineType.LAZY_STANDALONE
         "kotlinx.coroutines.internal.ScopeCoroutine" -> CoroutineType.SCOPE
+        "kotlinx.coroutines.JobImpl" -> CoroutineType.JOB
+        "kotlinx.coroutines.SupervisorJobImpl" -> CoroutineType.SUPERVISOR_JOB
         else -> CoroutineType.STANDALONE
     }
 
@@ -83,13 +80,6 @@ object CoroutineInstanceMapper : CoroutineMapper {
         val context = this["context"] as? Instance.ObjectI ?: return CoroutineContextInfo()
         if (context.cls.name == "kotlin.coroutines.EmptyCoroutineContext") {
             return CoroutineContextInfo()
-        }
-
-        val parent = (this["_parentHandle"] as? Instance.ObjectI).toParentRow()
-        val job = if (parent is JobRow) {
-            parent.type
-        } else {
-            null
         }
         var dispatcher: Dispatcher? = null
         var name: String? = null
@@ -122,7 +112,7 @@ object CoroutineInstanceMapper : CoroutineMapper {
             }
         }
         walk(context)
-        return CoroutineContextInfo(job, dispatcher, name)
+        return CoroutineContextInfo(dispatcher, name)
     }
 
     private fun Instance.ObjectI.toDispatcher(): Dispatcher = when (cls.name) {
