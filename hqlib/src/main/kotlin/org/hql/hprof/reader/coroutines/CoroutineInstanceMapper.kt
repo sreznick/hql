@@ -55,16 +55,12 @@ object CoroutineInstanceMapper : CoroutineMapper {
 
             // comment for later removal: надо перепроверять, возможно это не 100% правда
             "kotlinx.coroutines.NodeList",
-            $$"kotlinx.coroutines.JobSupport$ChildCompletion" ->
+            $$"kotlinx.coroutines.JobSupport$ChildCompletion",
+            "kotlinx.coroutines.ResumeOnCompletion" ->
                 (this["_prev"] as? Instance.ObjectI).toCoroutineState(asCoroutine)
 
-            "kotlinx.coroutines.ChildHandleNode" -> {
-                val child = this["childJob"] as? Instance.ObjectI
-                val childState = child?.get("_state") as? Instance.ObjectI
-                val childIsJob = child?.cls?.name?.toCoroutineType()?.isJob() == true
-                childState.toCoroutineState(asCoroutine && !childIsJob)
-            }
 
+            "kotlinx.coroutines.ChildHandleNode",
             $$"kotlinx.coroutines.JobSupport$Finishing" -> CoroutineState.WAITING_CHILDREN
 
             else -> CoroutineState.UNKNOWN
