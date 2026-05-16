@@ -33,7 +33,7 @@ class Class(private val hprof: Hprof, private val cls: ClassInternal) {
 
     val instances: List<ObjectI> by lazy {
         hprof.getInstancesOfClass(cls.id).map {
-            Instance.createObject(hprof, it.id) as ObjectI
+            ObjectI(hprof, it)
         }.toList()
     }
 
