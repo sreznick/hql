@@ -3,30 +3,22 @@ package org.hql.query
 import org.hql.hprof.heap.Heap
 import org.hql.query.ast.QueryAST
 import org.hql.query.tables.CoroutineTable
-import org.hql.query.tables.HprofTable
+import org.hql.query.tables.ClassTable
+import org.hql.query.tables.Table
 
 class Database(val heap: Heap) {
     val tables = hashMapOf<String, Table>()
 
-    private fun createHprofTable(name: String): HprofTable {
-        val cls = heap.getClassByName(name)
-        return HprofTable(
-            cls.instanceFieldTypes.keys.toList(),
-            cls.instances.map { instance ->
-                instance.fields.mapValues { Cell.fromInstance(it.value) }
-            }
-        )
+    fun getTable(name: String): Table = tables.getOrPut(name) {
+        when (name) {
+            "coroutines" -> CoroutineTable(heap)
+            else -> ClassTable(heap.getClassByName(name))
+        }
     }
 
-    fun query(query: String) {
-        val ast = QueryAST.create(query)
-        val table = tables.getOrPut(ast.targetClassName) {
-            when (ast.targetClassName) {
-                "coroutines" -> CoroutineTable(heap)
-                else -> createHprofTable(ast.targetClassName)
-            }
-        }
-        table.select(
+    private fun query(ast: QueryAST): Table {
+        val table = if (ast.subquery != null) query(ast.subquery) else getTable(ast.targetClassName)
+        return table.select(
             columns = ast.columns,
             columnNames = ast.columnNames,
             filter = ast.filter,
@@ -35,4 +27,6 @@ class Database(val heap: Heap) {
             offset = ast.offset
         )
     }
+
+    fun query(query: String): Table = query(QueryAST.create(query))
 }

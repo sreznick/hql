@@ -7,13 +7,15 @@ root : selectQuery EOF ;
 
 // Правило для SELECT: ключевое слово + какие столбцы + ключевое слово + имя класса
 // + опциональные условия where и limit
-selectQuery : SELECT columns FROM target=className additionalClause*;
+selectQuery : SELECT columns FROM target=table additionalClause*;
 
 columns : STAR | columnList;
 
 columnList : column (',' column)* ;
 
 column : expression (AS name=IDENTIFIER)? ;
+
+table : className | '(' selectQuery ')' ;
 
 className : IDENTIFIER ('.' IDENTIFIER)* ;
 

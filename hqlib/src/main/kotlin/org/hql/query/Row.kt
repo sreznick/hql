@@ -16,13 +16,3 @@ class MapRow(private val cells: Map<String, Cell>) : Row {
     override fun get(column: String): Cell =
         cells[column] ?: throw ColumnNotFoundException(column, cells.keys.toList())
 }
-
-/** [Row] that resolves cells lazily through a [resolver] applied to the underlying row [source]. */
-class ResolverRow<R>(
-    private val source: R,
-    private val knownColumns: List<String>,
-    private val resolver: (R, String) -> Cell?
-) : Row {
-    override fun get(column: String): Cell =
-        resolver(source, column) ?: throw ColumnNotFoundException(column, knownColumns)
-}

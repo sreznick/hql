@@ -2,9 +2,7 @@ package org.hql.query.tables
 
 import org.hql.query.BooleanCell
 import org.hql.query.Cell
-import org.hql.query.ResolverRow
 import org.hql.query.Row
-import org.hql.query.Table
 import org.hql.query.ast.SortOrder
 import org.hql.query.expressions.Expression
 import org.hql.query.printer.TablePrinter
@@ -13,37 +11,33 @@ import org.hql.query.printer.TablePrinter
  * Shared base for SQL-like tables. Subclasses provide the row source and per-row column resolution;
  * filtering, sorting, pagination, and rendering are handled here uniformly.
  */
-abstract class AbstractTable<R> : Table {
+abstract class Table {
 
     /** The full set of column names this table is known to expose by default */
     protected abstract val baseColumns: List<String>
 
     /** The base rows on which select operates */
-    protected abstract val rows: List<R>
+    protected abstract val rows: List<Row>
 
-    /** Resolves [column] on a single [row] to a [Cell] */
-    protected abstract fun resolveCell(row: R, column: String): Cell
-
-    final override fun select(
+    fun select(
         columns: List<Expression>,
         columnNames: List<String>,
         filter: Expression?,
         orderBy: List<Pair<Expression, SortOrder>>,
         limit: Int?,
         offset: Int?
-    ) {
+    ): Table {
         val outputColumns = columnNames.ifEmpty { baseColumns }
 
-        val richRows = rows.map { source ->
-            val baseRow = ResolverRow(source, baseColumns) { r, name -> resolveCell(r, name) }
-            if (columns.isEmpty()) baseRow
+        val richRows = rows.map { row ->
+            if (columns.isEmpty()) row
             else {
                 // SELECT expr1 [AS name1], ... — augment the row with computed columns
                 val computed = HashMap<String, Cell>(columns.size)
                 columns.zip(columnNames).forEach { (expr, name) ->
-                    computed[name] = expr.eval(baseRow)
+                    computed[name] = expr.eval(row)
                 }
-                ChainedRow(computed, baseRow)
+                ChainedRow(computed, row)
             }
         }
 
@@ -79,8 +73,13 @@ abstract class AbstractTable<R> : Table {
         offset?.let { processed = processed.drop(it) }
         limit?.let { processed = processed.take(it) }
 
-        val cellRows = processed.map { row -> outputColumns.map { row[it] } }
-        TablePrinter.print(outputColumns, cellRows)
+        return SimpleTable(outputColumns, processed)
+    }
+
+    // TODO: potentially pass different printers as a strategy
+    fun print() {
+        val cellRows = rows.map { row -> baseColumns.map { row[it] } }
+        TablePrinter.print(baseColumns, cellRows)
     }
 }
 
