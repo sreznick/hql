@@ -43,6 +43,7 @@ expression
     | left=expression op=AND right=expression        # AndExpr
     | left=expression op=OR right=expression         # OrExpr
 
+    | name=IDENTIFIER '(' args=argList? ')'          # FunctionCallExpr
     | BOOL_LITERAL                                   # BoolLiteralExpr
     | INT_LITERAL                                    # IntLiteralExpr
     | FLOAT_LITERAL                                  # FloatLiteralExpr
@@ -50,6 +51,8 @@ expression
     | STRING_LITERAL                                 # StringLiteralExpr
     | IDENTIFIER                                     # IdentifierExpr
     ;
+
+argList : expression (',' expression)* ;
 
 // Список поддерживаемых операторов
 operator : OP_EQ | OP_GT | OP_LT | OP_GE | OP_LE | OP_NEQ ;

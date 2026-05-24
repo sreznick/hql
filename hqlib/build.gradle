@@ -10,6 +10,7 @@ plugins {
 
 dependencies {
     implementation libs.antlr4.runtime
+    implementation libs.guava
 
     runtimeOnly 'com.charleskorn.kaml:kaml-jvm:0.104.0'
 

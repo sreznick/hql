@@ -22,7 +22,9 @@ class CoroutineHeapSearcher(
             "kotlinx.coroutines.BlockingCoroutine",
             "kotlinx.coroutines.StandaloneCoroutine",
             "kotlinx.coroutines.LazyStandaloneCoroutine",
-            "kotlinx.coroutines.internal.ScopeCoroutine"
+            "kotlinx.coroutines.internal.ScopeCoroutine",
+            "kotlinx.coroutines.JobImpl",
+            "kotlinx.coroutines.SupervisorJobImpl",
         )
     }
 }

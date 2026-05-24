@@ -4,8 +4,10 @@
 [versions]
 kotlin-gradle-plugin = "2.3.0"
 antlr = "4.13.2"
+guava = "33.4.5-jre"
 
 [libraries]
 kotlin-gradle-plugin = { module = "org.jetbrains.kotlin:kotlin-gradle-plugin", version.ref = "kotlin-gradle-plugin" }
 antlr4-runtime = { module = "org.antlr:antlr4-runtime", version.ref = "antlr" }
 antlr4 = { module = "org.antlr:antlr4", version.ref = "antlr" }
+guava = { module = "com.google.guava:guava", version.ref = "guava" }
