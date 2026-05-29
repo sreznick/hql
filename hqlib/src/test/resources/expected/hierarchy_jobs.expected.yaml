@@ -1,0 +1,10 @@
+queries:
+- query: "select * from coroutines"
+  expected: "id        | type           | state            | parent    | dispatcher\
+    \ | name    \n7118156b0 | BLOCKING       | WAITING_CHILDREN | -         | DEFAULT\
+    \    | \"parent\"\n7118eced8 | STANDALONE     | SUSPENDED        | 7118156b0 |\
+    \ IO         | \"child1\"\n7118ed1a0 | STANDALONE     | SUSPENDED        | 7118ed1f8\
+    \ | IO         | \"child2\"\n7118ed340 | STANDALONE     | SUSPENDED        | 7118ed398\
+    \ | DEFAULT    | \"child3\"\n7118ed1f8 | JOB            | WAITING_CHILDREN | -\
+    \         | -          | -       \n7118ed398 | SUPERVISOR_JOB | WAITING_CHILDREN\
+    \ | -         | -          | -       "
