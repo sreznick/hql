@@ -34,4 +34,6 @@ java {
 tasks.named('test') {
     // Use JUnit Platform for unit tests.
     useJUnitPlatform()
+    // Heap dumps in examples/dumps/ are several MB each; HprofReader loads them fully into memory.
+    maxHeapSize = '2g'
 }

@@ -1,0 +1,42 @@
+queries:
+- query: "select * from coroutines"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name     \n706447b28 | BLOCKING   | WAITING_CHILDREN | -         | -       \
+    \   | \"root\"   \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO\
+    \         | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8\
+    \ | IO         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
+    \ | IO         | \"child\"  \n703246f30 | JOB        | WAITING_CHILDREN | 706447b28\
+    \ | -          | -        \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
+    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
+    \ | -          | -        "
+- query: "select id, name, descendants_count() from coroutines"
+  expected: "id        | name      | descendants_count()\n706447b28 | \"root\"   \
+    \ | 6                  \n703248020 | \"grandma\" | 0                  \n70325c2c8\
+    \ | \"mom\"     | 0                  \n70661c360 | \"child\"   | 0           \
+    \       \n703246f30 | -         | 5                  \n703247ad8 | -         |\
+    \ 3                  \n703247b10 | -         | 1                  "
+- query: "select id, name, descendants_count() as dcount from coroutines"
+  expected: "id        | name      | dcount\n706447b28 | \"root\"    | 6     \n703248020\
+    \ | \"grandma\" | 0     \n70325c2c8 | \"mom\"     | 0     \n70661c360 | \"child\"\
+    \   | 0     \n703246f30 | -         | 5     \n703247ad8 | -         | 3     \n\
+    703247b10 | -         | 1     "
+- query: "select * from coroutines where is_descendant_of('706447b28')"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name     \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO      \
+    \   | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO\
+    \         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
+    \ | IO         | \"child\"  \n703246f30 | JOB        | WAITING_CHILDREN | 706447b28\
+    \ | -          | -        \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
+    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
+    \ | -          | -        "
+- query: "select * from coroutines where is_descendant_of('703246f30')"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name     \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO      \
+    \   | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO\
+    \         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
+    \ | IO         | \"child\"  \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
+    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
+    \ | -          | -        "
+- query: "select * from coroutines where is_sibling_of('703248020')"
+  expected: "id        | type | state            | parent    | dispatcher | name\n\
+    703247ad8 | JOB  | WAITING_CHILDREN | 703246f30 | -          | -   "

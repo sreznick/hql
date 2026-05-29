@@ -1,0 +1,12 @@
+queries:
+- query: "select * from coroutines"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name  \n703651728 | BLOCKING   | ACTIVE           | -         | -          |\
+    \ \"root\"\n703629788 | STANDALONE | SUSPENDED        | 703628b88 | IO       \
+    \  | \"ch1\" \n70363c5b0 | STANDALONE | ACTIVE           | 703628b88 | IO    \
+    \     | \"ch2\" \n703628b88 | JOB        | WAITING_CHILDREN | -         | -  \
+    \        | -     "
+- query: "select id, name, descendants_count() from coroutines"
+  expected: "id        | name   | descendants_count()\n703651728 | \"root\" | 0  \
+    \                \n703629788 | \"ch1\"  | 0                  \n70363c5b0 | \"\
+    ch2\"  | 0                  \n703628b88 | -      | 2                  "
