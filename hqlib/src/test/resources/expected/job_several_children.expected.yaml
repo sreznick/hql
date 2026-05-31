@@ -1,11 +1,14 @@
 queries:
 - query: "select * from coroutines"
   expected: "id        | type       | state            | parent    | dispatcher |\
-    \ name  \n703651728 | BLOCKING   | ACTIVE           | -         | -          |\
-    \ \"root\"\n703629788 | STANDALONE | SUSPENDED        | 703628b88 | IO       \
-    \  | \"ch1\" \n70363c5b0 | STANDALONE | ACTIVE           | 703628b88 | IO    \
-    \     | \"ch2\" \n703628b88 | JOB        | WAITING_CHILDREN | -         | -  \
-    \        | -     "
+    \ name   | thread                     | thread_id | thread_state \n703651728 |\
+    \ BLOCKING   | ACTIVE           | -         | -          | \"root\" | main   \
+    \                    | 707c42b90 | TIMED_WAITING\n703629788 | STANDALONE | SUSPENDED\
+    \        | 703628b88 | IO         | \"ch1\"  | -                          | -\
+    \         | -            \n70363c5b0 | STANDALONE | ACTIVE           | 703628b88\
+    \ | IO         | \"ch2\"  | DefaultDispatcher-worker-3 | 70363cef8 | TIMED_WAITING\n\
+    703628b88 | JOB        | WAITING_CHILDREN | -         | -          | -      |\
+    \ main                       | 707c42b90 | TIMED_WAITING"
 - query: "select id, name, descendants_count() from coroutines"
   expected: "id        | name   | descendants_count()\n703651728 | \"root\" | 0  \
     \                \n703629788 | \"ch1\"  | 0                  \n70363c5b0 | \"\

@@ -25,6 +25,12 @@ class CoroutineColumnResolver {
             "dispatcher" -> row.contextInfo.dispatcher.cell()
             "name" -> row.contextInfo.name.toCell()
 
+            // carrier thread of a running coroutine; all null for a suspended one (on no thread)
+            "thread" -> row.carrierThread?.let { (it.name ?: it.instance.id.toCompactHex()) }.toCell()
+            // thread's heap id, matching the `id` column of the threads table
+            "thread_id" -> row.carrierThread?.instance?.id?.toCompactHex().toCell()
+            "thread_state" -> row.carrierThread?.state?.cell() ?: NullCell
+
             else -> resolveNested(row, name)
         }
 

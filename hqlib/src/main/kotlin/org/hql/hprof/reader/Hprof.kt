@@ -1,6 +1,7 @@
 package org.hql.hprof.reader
 
 import org.hql.hprof.heap.Identifier
+import org.hql.hprof.heap.instances.Instance
 
 class Hprof {
     private val _strings = hashMapOf<Identifier, String>()
@@ -8,6 +9,16 @@ class Hprof {
     private val _classes = hashMapOf<Identifier, ClassInternal>()
     private val _instances = hashMapOf<Identifier, InstanceInternal>()
     private val instancesByClass = hashMapOf<Identifier, MutableList<InstanceInternal.Object>>()
+    private val _threadObjectIds = mutableListOf<Identifier>()
+    private val _threadSerialToObjectId = hashMapOf<Int, Identifier>()
+    private val _frameRootsByThreadSerial = hashMapOf<Int, MutableList<Identifier>>()
+
+    /**
+     * Identity cache of resolved instances, keyed by object id. Scoped to this dump (not global) so
+     * that ids — which are heap addresses and routinely collide across dumps — never resolve to an
+     * instance belonging to a different dump.
+     */
+    val instanceCache: MutableMap<Identifier, Instance> = hashMapOf()
 
     fun addString(id: Identifier, value: String) {
         if (_strings.containsKey(id)) {
@@ -47,6 +58,25 @@ class Hprof {
         }
     }
 
+    /**
+     * Records a live thread, identified by the [ROOT THREAD OBJECT] subtag, by its Thread instance id
+     * and the dump-local thread serial number (used to attribute stack-frame roots to it)
+     */
+    fun addThreadRoot(id: Identifier, serial: Int) {
+        _threadObjectIds.add(id)
+        _threadSerialToObjectId[serial] = id
+    }
+
+    /**
+     * Records a stack-frame-local object root ([ROOT JAVA FRAME] / [ROOT JNI LOCAL]) owned by the
+     * thread with the given serial number. These tie running objects (e.g. a coroutine's executing
+     * continuation) to the thread currently executing them
+     */
+    fun addFrameRoot(threadSerial: Int, objectId: Identifier) {
+        if (objectId.isNull()) return
+        _frameRootsByThreadSerial.getOrPut(threadSerial) { mutableListOf() }.add(objectId)
+    }
+
     fun getInstanceFieldTypes(classId: Identifier): List<Pair<Identifier, BasicType>> {
         val types = mutableListOf<Pair<Identifier, BasicType>>()
         var cls = _classes[classId]
@@ -82,4 +112,14 @@ class Hprof {
         get() = _classes
     val instances: Map<Identifier, InstanceInternal>
         get() = _instances
+
+    // ids of the Thread instances that were roots of type [ROOT THREAD OBJECT] — one per live thread
+    val threadObjectIds: List<Identifier>
+        get() = _threadObjectIds
+
+    // Stack-frame-local object roots grouped by the object id of the live thread that owns them
+    val frameRootsByThreadObjectId: Map<Identifier, List<Identifier>>
+        get() = _frameRootsByThreadSerial.entries.mapNotNull { (serial, ids) ->
+            _threadSerialToObjectId[serial]?.let { threadId -> threadId to ids.toList() }
+        }.toMap()
 }

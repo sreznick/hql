@@ -1,6 +1,7 @@
 queries:
 - query: "select * from coroutines"
   expected: "id        | type            | state            | parent    | dispatcher\
-    \ | name  \n711820158 | BLOCKING        | WAITING_CHILDREN | -         | -   \
-    \       | -     \n7118c7e20 | LAZY_STANDALONE | SUSPENDED        | 711820158 |\
-    \ -          | \"lazy\""
+    \ | name   | thread | thread_id | thread_state \n711820158 | BLOCKING        |\
+    \ WAITING_CHILDREN | -         | -          | -      | main   | 711820178 | TIMED_WAITING\n\
+    7118c7e20 | LAZY_STANDALONE | SUSPENDED        | 711820158 | -          | \"lazy\"\
+    \ | -      | -         | -            "

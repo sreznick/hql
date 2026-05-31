@@ -1,10 +1,12 @@
 queries:
 - query: "select * from coroutines"
   expected: "id        | type       | state            | parent    | dispatcher |\
-    \ name         \n711800160 | BLOCKING   | WAITING_CHILDREN | -         | -   \
-    \       | \"grandparent\"\n711956fa8 | STANDALONE | WAITING_CHILDREN | 711800160\
-    \ | -          | \"parent\"     \n711957048 | STANDALONE | SUSPENDED        |\
-    \ 711956fa8 | -          | \"child\"      "
+    \ name          | thread | thread_id | thread_state \n711800160 | BLOCKING   |\
+    \ WAITING_CHILDREN | -         | -          | \"grandparent\" | main   | 711800180\
+    \ | TIMED_WAITING\n711956fa8 | STANDALONE | WAITING_CHILDREN | 711800160 | - \
+    \         | \"parent\"      | -      | -         | -            \n711957048 |\
+    \ STANDALONE | SUSPENDED        | 711956fa8 | -          | \"child\"       | -\
+    \      | -         | -            "
 - query: "select id, parent from coroutines"
   expected: "id        | parent   \n711800160 | -        \n711956fa8 | 711800160\n\
     711957048 | 711956fa8"

@@ -4,8 +4,13 @@ import com.google.common.cache.Cache
 import com.google.common.cache.CacheBuilder
 import org.hql.HQLQueryException
 import org.hql.hprof.heap.Heap
+import org.hql.hprof.heap.Identifier
 import org.hql.hprof.heap.instances.coroutines.CoroutineRow
+import org.hql.hprof.heap.instances.coroutines.enums.CoroutineState
+import org.hql.hprof.heap.instances.threads.enums.ThreadState
 import org.hql.hprof.reader.coroutines.CoroutineHeapSearcher
+import org.hql.hprof.reader.coroutines.CoroutineThreadLinker
+import org.hql.hprof.reader.threads.ThreadHeapSearcher
 import org.hql.query.BooleanCell
 import org.hql.query.Cell
 import org.hql.query.IntCell
@@ -23,11 +28,24 @@ class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
 
     override val baseColumns: List<String> = DEFAULT_COLUMNS
 
-    // converted coroutine rows to internal format from found coroutines in the dump
-    override val rows: List<CoroutineRow> = CoroutineHeapSearcher(heap).findAll()
+    // Coroutine rows, each enriched with the live thread currently running it (if any).
+    // The carrier thread is recovered by correlating stack-frame roots,
+    // and lets a running coroutine surface its thread's JVM state which the coroutine's own state cannot show
+    override val rows: List<CoroutineRow> = buildRows(heap)
 
-    private val childrenIndex: Map<CoroutineRow, List<CoroutineRow>> =
-        rows.mapNotNull { row -> row.parent?.let { it to row } }
+    private fun buildRows(heap: Heap): List<CoroutineRow> {
+        val base = CoroutineHeapSearcher(heap).findAll()
+        val threadsById = ThreadHeapSearcher(heap).findAll().associateBy { it.instance.id }
+        val carrierIdByCoroutineId = CoroutineThreadLinker(heap)
+            .carrierThreadByCoroutine(base.map { it.instance.id }.toSet())
+        return base.map { row ->
+            row.copy(carrierThread = carrierIdByCoroutineId[row.instance.id]?.let { threadsById[it] })
+        }
+    }
+
+    // keyed by the parent coroutine's instance id (value equality)
+    private val childrenByParentId: Map<Identifier, List<CoroutineRow>> =
+        rows.mapNotNull { row -> row.parent?.let { parent -> parent.instance.id to row } }
             .groupBy({ it.first }) { it.second }
 
     private val rowsById: Map<String, CoroutineRow> =
@@ -53,6 +71,16 @@ class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
             val rootId = args.requireSingleString("is_sibling_of")
             BooleanCell(lookupRow(row) in siblingSetOf(rootId))
         }
+        // coroutine-level: the job is suspended at a suspension point
+        BuiltinFunctions.register("is_suspended") { row, _ ->
+            BooleanCell(lookupRow(row).state == CoroutineState.SUSPENDED)
+        }
+        // thread-level: the coroutine is running,
+        // but its carrier thread is blocked on a monitor (synchronized / Object.wait) — invisible to the coroutine state machine,
+        // only observable via the thread it occupies
+        BuiltinFunctions.register("is_blocked") { row, _ ->
+            BooleanCell(lookupRow(row).carrierThread?.state == ThreadState.BLOCKED)
+        }
     }
 
     private fun descendantSetOf(rootId: String): Set<CoroutineRow> =
@@ -70,7 +98,7 @@ class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
         }
 
     private val CoroutineRow.children: List<CoroutineRow>
-        get() = childrenIndex[this].orEmpty()
+        get() = childrenByParentId[instance.id].orEmpty()
 
     private val CoroutineRow.siblings: List<CoroutineRow>
         get() = parent?.children?.filter { it !== this }.orEmpty()
@@ -104,7 +132,8 @@ class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
         private const val SUBTREE_CACHE_MAX_SIZE = 1024L
 
         private val DEFAULT_COLUMNS = listOf(
-            "id", "type", "state", "parent", "dispatcher", "name"
+            "id", "type", "state", "parent", "dispatcher", "name",
+            "thread", "thread_id", "thread_state"
         )
     }
 }

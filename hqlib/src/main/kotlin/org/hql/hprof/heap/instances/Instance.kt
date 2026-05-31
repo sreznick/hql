@@ -56,7 +56,6 @@ sealed class Instance {
     }
 
     companion object {
-        private val cache = mutableMapOf<Identifier, Instance>()
         private fun convertObject(hprof: Hprof, inst: InstanceInternal.Object): Instance {
             val className = hprof.getClassName(inst.classId)
             return when (className) {
@@ -76,7 +75,7 @@ sealed class Instance {
 
         internal fun createObject(hprof: Hprof, id: Identifier): Instance {
             if (id.isNull()) return NullI
-            return cache.getOrPut(id) {
+            return hprof.instanceCache.getOrPut(id) {
                 val inst = hprof.getInstanceById(id)
                 when (inst) {
                     is InstanceInternal.ObjectArray ->

@@ -4,6 +4,7 @@ import org.hql.hprof.heap.Heap
 import org.hql.query.ast.QueryAST
 import org.hql.query.tables.CoroutineTable
 import org.hql.query.tables.HprofTable
+import org.hql.query.tables.ThreadTable
 
 class Database(val heap: Heap) {
     val tables = hashMapOf<String, Table>()
@@ -23,6 +24,7 @@ class Database(val heap: Heap) {
         val table = tables.getOrPut(ast.targetClassName) {
             when (ast.targetClassName) {
                 "coroutines" -> CoroutineTable(heap)
+                "threads" -> ThreadTable(heap)
                 else -> createHprofTable(ast.targetClassName)
             }
         }

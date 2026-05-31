@@ -1,5 +1,7 @@
 queries:
 - query: "select * from coroutines"
-  expected: "id        | type           | state  | parent | dispatcher | name  \n\
-    70321ec08 | BLOCKING       | ACTIVE | -      | -          | \"root\"\n705805498\
-    \ | SUPERVISOR_JOB | ACTIVE | -      | -          | -     "
+  expected: "id        | type           | state  | parent | dispatcher | name   |\
+    \ thread | thread_id | thread_state \n70321ec08 | BLOCKING       | ACTIVE | -\
+    \      | -          | \"root\" | main   | 706010e88 | TIMED_WAITING\n705805498\
+    \ | SUPERVISOR_JOB | ACTIVE | -      | -          | -      | main   | 706010e88\
+    \ | TIMED_WAITING"

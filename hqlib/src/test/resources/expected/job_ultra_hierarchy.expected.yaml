@@ -1,14 +1,17 @@
 queries:
 - query: "select * from coroutines"
   expected: "id        | type       | state            | parent    | dispatcher |\
-    \ name     \n706447b28 | BLOCKING   | WAITING_CHILDREN | -         | -       \
-    \   | \"root\"   \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO\
-    \         | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8\
-    \ | IO         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
-    \ | IO         | \"child\"  \n703246f30 | JOB        | WAITING_CHILDREN | 706447b28\
-    \ | -          | -        \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
-    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
-    \ | -          | -        "
+    \ name      | thread | thread_id | thread_state \n706447b28 | BLOCKING   | WAITING_CHILDREN\
+    \ | -         | -          | \"root\"    | main   | 703266e48 | TIMED_WAITING\n\
+    703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO         | \"grandma\"\
+    \ | -      | -         | -            \n70325c2c8 | STANDALONE | SUSPENDED   \
+    \     | 703247ad8 | IO         | \"mom\"     | -      | -         | -        \
+    \    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10 | IO         | \"\
+    child\"   | -      | -         | -            \n703246f30 | JOB        | WAITING_CHILDREN\
+    \ | 706447b28 | -          | -         | main   | 703266e48 | TIMED_WAITING\n\
+    703247ad8 | JOB        | WAITING_CHILDREN | 703246f30 | -          | -       \
+    \  | main   | 703266e48 | TIMED_WAITING\n703247b10 | JOB        | WAITING_CHILDREN\
+    \ | 703247ad8 | -          | -         | main   | 703266e48 | TIMED_WAITING"
 - query: "select id, name, descendants_count() from coroutines"
   expected: "id        | name      | descendants_count()\n706447b28 | \"root\"   \
     \ | 6                  \n703248020 | \"grandma\" | 0                  \n70325c2c8\
@@ -22,21 +25,27 @@ queries:
     703247b10 | -         | 1     "
 - query: "select * from coroutines where is_descendant_of('706447b28')"
   expected: "id        | type       | state            | parent    | dispatcher |\
-    \ name     \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO      \
-    \   | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO\
-    \         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
-    \ | IO         | \"child\"  \n703246f30 | JOB        | WAITING_CHILDREN | 706447b28\
-    \ | -          | -        \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
-    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
-    \ | -          | -        "
+    \ name      | thread | thread_id | thread_state \n703248020 | STANDALONE | SUSPENDED\
+    \        | 703246f30 | IO         | \"grandma\" | -      | -         | -     \
+    \       \n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO         |\
+    \ \"mom\"     | -      | -         | -            \n70661c360 | STANDALONE | SUSPENDED\
+    \        | 703247b10 | IO         | \"child\"   | -      | -         | -     \
+    \       \n703246f30 | JOB        | WAITING_CHILDREN | 706447b28 | -          |\
+    \ -         | main   | 703266e48 | TIMED_WAITING\n703247ad8 | JOB        | WAITING_CHILDREN\
+    \ | 703246f30 | -          | -         | main   | 703266e48 | TIMED_WAITING\n\
+    703247b10 | JOB        | WAITING_CHILDREN | 703247ad8 | -          | -       \
+    \  | main   | 703266e48 | TIMED_WAITING"
 - query: "select * from coroutines where is_descendant_of('703246f30')"
   expected: "id        | type       | state            | parent    | dispatcher |\
-    \ name     \n703248020 | STANDALONE | SUSPENDED        | 703246f30 | IO      \
-    \   | \"grandma\"\n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO\
-    \         | \"mom\"    \n70661c360 | STANDALONE | SUSPENDED        | 703247b10\
-    \ | IO         | \"child\"  \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30\
-    \ | -          | -        \n703247b10 | JOB        | WAITING_CHILDREN | 703247ad8\
-    \ | -          | -        "
+    \ name      | thread | thread_id | thread_state \n703248020 | STANDALONE | SUSPENDED\
+    \        | 703246f30 | IO         | \"grandma\" | -      | -         | -     \
+    \       \n70325c2c8 | STANDALONE | SUSPENDED        | 703247ad8 | IO         |\
+    \ \"mom\"     | -      | -         | -            \n70661c360 | STANDALONE | SUSPENDED\
+    \        | 703247b10 | IO         | \"child\"   | -      | -         | -     \
+    \       \n703247ad8 | JOB        | WAITING_CHILDREN | 703246f30 | -          |\
+    \ -         | main   | 703266e48 | TIMED_WAITING\n703247b10 | JOB        | WAITING_CHILDREN\
+    \ | 703247ad8 | -          | -         | main   | 703266e48 | TIMED_WAITING"
 - query: "select * from coroutines where is_sibling_of('703248020')"
-  expected: "id        | type | state            | parent    | dispatcher | name\n\
-    703247ad8 | JOB  | WAITING_CHILDREN | 703246f30 | -          | -   "
+  expected: "id        | type | state            | parent    | dispatcher | name |\
+    \ thread | thread_id | thread_state \n703247ad8 | JOB  | WAITING_CHILDREN | 703246f30\
+    \ | -          | -    | main   | 703266e48 | TIMED_WAITING"
