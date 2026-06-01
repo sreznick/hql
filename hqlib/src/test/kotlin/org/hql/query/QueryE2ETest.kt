@@ -101,7 +101,12 @@ class QueryE2ETest {
 
             val regenerated = mutableListOf<QueryCase>()
             for ((idx, case) in expectations.queries.withIndex()) {
-                val actual = captureStdout { database.query(case.query) }.trimEnd('\n')
+                val result = database.query(case.query)
+                val buffer = ByteArrayOutputStream()
+                val printStream = PrintStream(buffer, true, StandardCharsets.UTF_8)
+                result.print(printStream)
+                val actual = buffer.toString(StandardCharsets.UTF_8).trimEnd('\n')
+
                 if (regenMode) {
                     regenerated.add(QueryCase(case.query, actual))
                     continue
@@ -130,17 +135,5 @@ class QueryE2ETest {
         if (failures > 0) {
             fail("$failures query mismatch(es):\n$report")
         }
-    }
-
-    private fun captureStdout(block: () -> Unit): String {
-        val original = System.out
-        val buffer = ByteArrayOutputStream()
-        System.setOut(PrintStream(buffer, true, StandardCharsets.UTF_8))
-        try {
-            block()
-        } finally {
-            System.setOut(original)
-        }
-        return buffer.toString(StandardCharsets.UTF_8)
     }
 }

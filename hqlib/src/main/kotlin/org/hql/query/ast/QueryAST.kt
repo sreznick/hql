@@ -12,62 +12,78 @@ import org.hql.query.StringCell
 import org.hql.query.expressions.Expression
 
 // Рекурсивная функция для рисования дерева логики
-private fun printTree(expr: Expression, indent: String) {
+private fun printTree(expr: Expression, indent: String, out: Appendable = System.out) {
     when (expr) {
         is Expression.Field ->
-            println("$indent[FIELD=${expr.field}]")
+            out.appendLine("$indent[FIELD=${expr.field}]")
         is Expression.Literal ->
-            println("$indent[LITERAL=${expr.value}]")
+            out.appendLine("$indent[LITERAL=${expr.value}]")
 
         is Expression.And -> {
-            println("$indent[AND]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[AND]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.Or -> {
-            println("$indent[OR]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[OR]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.Comparison -> {
-            println("$indent[COMPARISON ${expr.op}]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[COMPARISON ${expr.op}]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
 
         is Expression.Access -> {
-            println("$indent[ACCESS ${expr.field}]")
-            printTree(expr.expr, "$indent  |")
+            out.appendLine("$indent[ACCESS ${expr.field}]")
+            printTree(expr.expr, "$indent  |", out = out)
         }
         is Expression.Div -> {
-            println("$indent[DIV]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[DIV]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.Minus -> {
-            println("$indent[MINUS]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[MINUS]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.Mult -> {
-            println("$indent[MULT]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[MULT]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.Plus -> {
-            println("$indent[PLUS]")
-            printTree(expr.left, "$indent  |")
-            printTree(expr.right, "$indent  |")
+            out.appendLine("$indent[PLUS]")
+            printTree(expr.left, "$indent  |", out = out)
+            printTree(expr.right, "$indent  |", out = out)
         }
         is Expression.FunctionCall -> {
-            println("$indent[FUNCTION_CALL=${expr.name}]")
-            expr.args.forEach { printTree(it, "$indent  |") }
+            out.appendLine("$indent[FUNCTION_CALL=${expr.name}]")
+            expr.args.forEach { printTree(it, "$indent  |", out = out) }
         }
     }
 }
 
+sealed class DataSource {
+    data class Class(val name: String) : DataSource() {
+        override fun print(indent: String, out: Appendable) {
+            out.appendLine("$indent -> Target Class: $name")
+        }
+    }
+    data class Subquery(val ast: QueryAST) : DataSource() {
+        override fun print(indent: String, out: Appendable) {
+            out.appendLine("$indent -> Target Subquery:")
+            ast.printQuery(indent = "$indent    | ", out = out)
+        }
+    }
+
+    abstract fun print(indent: String = "", out: Appendable = System.out)
+}
+
 data class QueryAST(
-    val targetClassName: String,
+    val target: DataSource,
     val columns: List<Expression> = emptyList(),
     val columnNames: List<String> = emptyList(),
     val filter: Expression? = null,
@@ -75,49 +91,44 @@ data class QueryAST(
     val limit: Int? = null,
     val offset: Int? = null
 ) {
-    fun print() {
-        println(" -> Target Class: $targetClassName")
-        print(" -> Columns:      ")
+    fun printQuery(indent: String = "", out: Appendable = System.out) {
+        target.print(indent = indent, out = out)
+
+        out.append("$indent -> Columns:      ")
         if (columns.isEmpty())
-            println("ALL")
+            out.appendLine("${indent}ALL")
         else {
-            println()
-            columns.forEach { printTree(it, indent = "    ") }
+            out.appendLine()
+            columns.forEach { printTree(it, indent = "$indent    ", out = out) }
         }
-        println(" -> Limit:        ${limit ?: "All"}")
-        println(" -> Order:        ")
+        out.appendLine("$indent -> Limit:        ${limit ?: "All"}")
+        out.appendLine("$indent -> Order:        ")
         if (orderBy.isEmpty()) {
-            println("NONE")
+            out.appendLine("${indent}NONE")
         } else {
-            println()
+            out.appendLine()
             orderBy.forEach { (expr, order) ->
-                println("      Direction: ${order.name}")
-                printTree(expr, indent = "      ")
+                out.appendLine("$indent      Direction: ${order.name}")
+                printTree(expr, indent = "$indent      ", out = out)
             }
         }
-        println(" -> Logic Tree:")
+        out.appendLine("$indent -> Logic Tree:")
 
         // Проверка
         if (filter != null) {
-            printTree(filter, indent = "    ")
+            printTree(filter, indent = "$indent    ", out = out)
         } else {
-            println("    (No filter)")
+            out.appendLine("$indent    (No filter)")
         }
     }
 
     companion object {
-        fun create(query: String): QueryAST {
-            val charStream = CharStreams.fromString(query)
-            val lexer = ExprLexer(charStream)
-            val tokens = CommonTokenStream(lexer)
-            val parser = ExprParser(tokens)
-
-            // Важно: начинаем парсинг
-            val tree = parser.root()
-            val selectCtx = tree.selectQuery()
-
-            // 1. Имя класса (используем метку target из грамматики)
-            val className = selectCtx.target.text
+        private fun createFromContext(selectCtx: ExprParser.SelectQueryContext): QueryAST {
+            // 1. Имя класса либо подзапрос (используем метку target из грамматики)
+            val target = selectCtx.target.run {
+                className()?.let { DataSource.Class(it.text) } ?:
+                DataSource.Subquery(createFromContext(selectQuery()))
+            }
 
             // 2. Обработка колонок (раз уж ты добавил их в грамматику)
             val columnsList = mutableListOf<Expression>()
@@ -166,7 +177,7 @@ data class QueryAST(
             }
 
             return QueryAST(
-                targetClassName = className,
+                target = target,
                 filter = filterExpr,
                 limit = limitValue,
                 offset = offsetValue,
@@ -174,6 +185,19 @@ data class QueryAST(
                 columns = columnsList,
                 columnNames = columnNames
             )
+        }
+
+        fun create(query: String): QueryAST {
+            val charStream = CharStreams.fromString(query)
+            val lexer = ExprLexer(charStream)
+            val tokens = CommonTokenStream(lexer)
+            val parser = ExprParser(tokens)
+
+            // Важно: начинаем парсинг
+            val tree = parser.root()
+            val selectCtx = tree.selectQuery()
+
+            return createFromContext(selectCtx)
         }
 
         // Рекурсивная функция для превращения дерева ANTLR в наш FilterExpr

@@ -1,0 +1,70 @@
+queries:
+  - query: "select * from (select * from User where name = 'User567')"
+    expected: |
+      name    | age | city | active
+      User567 | 16  | Def  | false 
+
+  - query: "select * from (select name, age from User where active) where age > 27"
+    expected: |
+      name    | age
+      User366 | 28 
+      User389 | 29 
+      User404 | 29 
+      User415 | 29 
+      User419 | 29 
+      User422 | 28 
+      User471 | 29 
+      User520 | 29 
+      User530 | 29 
+      User552 | 28 
+      User576 | 29 
+      User610 | 29 
+      User635 | 29 
+      User669 | 29 
+      User673 | 29 
+      User679 | 29 
+      User682 | 29 
+      User699 | 28 
+      User745 | 28 
+      User810 | 29 
+      User870 | 28 
+      User894 | 28 
+      User931 | 28 
+      User945 | 29 
+      User948 | 29 
+      User951 | 29 
+      User953 | 29 
+      User967 | 28 
+      User996 | 29 
+      User5   | 28 
+      User8   | 29 
+      User15  | 28 
+      User16  | 28 
+      User18  | 28 
+      User28  | 28 
+      User54  | 29 
+      User57  | 29 
+      User88  | 28 
+      User94  | 28 
+      User124 | 29 
+      User131 | 29 
+      User155 | 28 
+      User166 | 28 
+      User199 | 28 
+      User201 | 29 
+      User232 | 28 
+      User258 | 29 
+      User275 | 29 
+
+  - query: "select name, city, agePlusOne + 2 as agePlusThree from (select name, city, age + 1 as agePlusOne from User where name > 'User990')"
+    expected: |
+      name    | city | agePlusThree
+      User991 | Def  | 26          
+      User992 | Msk  | 21          
+      User993 | Def  | 19          
+      User994 | Msk  | 29          
+      User995 | Spb  | 21          
+      User996 | Abc  | 32          
+      User997 | Abc  | 13          
+      User998 | Spb  | 20          
+      User999 | Abc  | 23          
