@@ -77,9 +77,9 @@ abstract class Table {
     }
 
     // TODO: potentially pass different printers as a strategy
-    fun print() {
+    fun print(out: Appendable = System.out) {
         val cellRows = rows.map { row -> baseColumns.map { row[it] } }
-        TablePrinter.print(baseColumns, cellRows)
+        TablePrinter.print(baseColumns, cellRows, out)
     }
 }
 

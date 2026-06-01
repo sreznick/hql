@@ -17,30 +17,35 @@ data class CoroutineRow(
 ) : Row {
     override fun get(column: String): Cell =
         when (column) {
-            "id" -> instance.id.toCompactHex().toCell()
-            "type" -> type.cell()
-            "state" -> state.cell()
-            "parent" -> parent?.instance?.id?.toCompactHex().toCell()
+            "id" -> instance.id.toCompactHex().toCell
+            "type" -> type.toCell
+            "state" -> state.toCell
+            "parent" -> parent?.instance?.id?.toCompactHex().toCell
 
-            "job_type" -> contextInfo.job.cell()
-            "dispatcher" -> contextInfo.dispatcher.cell()
-            "name" -> contextInfo.name.toCell()
+            "dispatcher" -> contextInfo.dispatcher.toCell
+            "name" -> contextInfo.name.toCell
 
-            else -> resolveNested(column)
+            else -> {
+                // Support nested access to parent coroutine fields using "parent.<field>" syntax
+                if (column.startsWith("parent.")) {
+                    resolveNested(column)
+                } else {
+                    // Fallback to raw heap field access for advanced or experimental queries.
+                    // This allows inspecting internal coroutine fields not explicitly exposed as table columns
+                    Cell.fromInstance(instance[column])
+                }
+            }
         }
 
-    private fun resolveNested(name: String): Cell =
-        if (name.startsWith("parent.")) {
-            // Support nested access to parent coroutine fields using "parent.<field>" syntax
-            val field = name.removePrefix("parent.")
-            // comment for later removal: добавить обработку случая, когда родитель job
-            (parent as? CoroutineRow)?.let { it[field] } ?: NullCell
-        } else {
-            // Fallback to raw heap field access for advanced or experimental queries.
-            // This allows inspecting internal coroutine fields not explicitly exposed as table columns
-            Cell.fromInstance(instance[name])
-        }
+    private fun resolveNested(name: String): Cell {
+        val field = name.removePrefix("parent.")
+        // comment for later removal: добавить обработку случая, когда родитель job
+        return parent?.get(field) ?: NullCell
+    }
 
-    private fun String?.toCell(): Cell = if (this == null) NullCell else StringCell(this)
-    private fun Enum<*>?.cell(): Cell = if (this == null) NullCell else StringCell(name)
+
+    private val String?.toCell: Cell
+        get() = this?.let { StringCell(this) } ?: NullCell
+    private val Enum<*>?.toCell: Cell
+        get() = this?.let { StringCell(name) } ?: NullCell
 }

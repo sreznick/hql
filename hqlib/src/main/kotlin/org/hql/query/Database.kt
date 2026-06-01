@@ -1,6 +1,7 @@
 package org.hql.query
 
 import org.hql.hprof.heap.Heap
+import org.hql.query.ast.DataSource
 import org.hql.query.ast.QueryAST
 import org.hql.query.tables.CoroutineTable
 import org.hql.query.tables.ClassTable
@@ -17,7 +18,10 @@ class Database(val heap: Heap) {
     }
 
     private fun query(ast: QueryAST): Table {
-        val table = if (ast.subquery != null) query(ast.subquery) else getTable(ast.targetClassName)
+        val table = when (ast.target) {
+            is DataSource.Class -> getTable(ast.target.name)
+            is DataSource.Subquery -> query(ast.target.ast)
+        }
         return table.select(
             columns = ast.columns,
             columnNames = ast.columnNames,
