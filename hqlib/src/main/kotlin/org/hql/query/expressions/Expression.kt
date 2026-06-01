@@ -44,6 +44,10 @@ sealed class Expression {
         override fun eval(row: Row): Cell = left.eval(row) or right.eval(row)
     }
 
+    data class FunctionCall(val name: String, val args: List<Expression>) : Expression() {
+        override fun eval(row: Row): Cell = BuiltinFunctions.call(name, row, args.map { it.eval(row) })
+    }
+
     data class Comparison(val left: Expression, val op: String, val right: Expression) : Expression() {
         override fun eval(row: Row): Cell {
             val compareResult = left.eval(row).compareTo(right.eval(row))

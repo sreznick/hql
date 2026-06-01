@@ -1,0 +1,4 @@
+queries:
+- query: "select * from coroutines"
+  expected: "id        | type     | state     | parent | dispatcher | name    \n71180ac08\
+    \ | BLOCKING | SUSPENDED | -      | -          | \"parent\""

@@ -9,12 +9,12 @@ import org.hql.query.Row
 import org.hql.query.StringCell
 
 data class CoroutineRow(
-    override val instance: Instance.ObjectI,
+    val instance: Instance.ObjectI,
     val type: CoroutineType,
     val state: CoroutineState,
-    val parent: CoroutineParentRow?,
+    val parent: CoroutineRow?,
     val contextInfo: CoroutineContextInfo
-) : CoroutineParentRow(instance), Row {
+) : Row {
     override fun get(column: String): Cell =
         when (column) {
             "id" -> instance.id.toCompactHex().toCell()

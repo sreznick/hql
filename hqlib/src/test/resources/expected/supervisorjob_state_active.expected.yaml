@@ -1,0 +1,5 @@
+queries:
+- query: "select * from coroutines"
+  expected: "id        | type           | state  | parent | dispatcher | name  \n\
+    70321ec08 | BLOCKING       | ACTIVE | -      | -          | \"root\"\n705805498\
+    \ | SUPERVISOR_JOB | ACTIVE | -      | -          | -     "
