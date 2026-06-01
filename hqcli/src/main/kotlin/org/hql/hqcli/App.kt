@@ -39,11 +39,11 @@ fun main(args: Array<String>) {
             val ast = QueryAST.create(query)
 
             println("Parsed successfully:")
-            ast.print()
+            ast.printQuery()
 
             println("-".repeat(40) + "\n")
             println("Query results:")
-            db.query(query)
+            db.query(query).print()
         } catch (e: HQLException) {
             println("Error: ${e.message}")
         } catch (e: Exception) {

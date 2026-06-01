@@ -7,7 +7,6 @@ import org.hql.hprof.heap.Heap
 import org.hql.hprof.heap.instances.coroutines.CoroutineRow
 import org.hql.hprof.reader.coroutines.CoroutineHeapSearcher
 import org.hql.query.BooleanCell
-import org.hql.query.Cell
 import org.hql.query.IntCell
 import org.hql.query.Row
 import org.hql.query.StringCell
@@ -17,9 +16,7 @@ import org.hql.query.expressions.BuiltinFunctions.requireSingleString
 /**
  * Table implementation over coroutine data extracted from a heap dump
  */
-class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
-
-    private val resolver = CoroutineColumnResolver()
+class CoroutineTable(heap: Heap) : Table() {
 
     override val baseColumns: List<String> = DEFAULT_COLUMNS
 
@@ -90,8 +87,6 @@ class CoroutineTable(heap: Heap) : AbstractTable<CoroutineRow>() {
         dfs(root)
         return result
     }
-
-    override fun resolveCell(row: CoroutineRow, column: String): Cell = resolver.resolve(row, column)
 
     private fun lookupRow(row: Row): CoroutineRow {
         val idCell = row["id"] as? StringCell
