@@ -56,7 +56,7 @@ interface Cell : Comparable<Cell> {
 
 data object NullCell : Cell {
     override val type: String = "null"
-    override fun toString() = "null"
+    override fun toString() = "-"
     override fun compareTo(other: Cell): Int {
         if (other is NullCell) return 0
         return super.compareTo(other)
@@ -169,7 +169,7 @@ data class ArrayCell(val instance: Instance.ArrayI) : Cell {
 
 data class StringCell(val value: String) : Cell {
     override val type: String = "string"
-    override fun toString() = "\"$value\""
+    override fun toString() = value
     override fun compareTo(other: Cell): Int {
         if (other is StringCell) return value.compareTo(other.value)
         return super.compareTo(other)
@@ -196,6 +196,6 @@ data class ClassCell(val cls: Class) : Cell {
 
 class ObjectCell(val obj: Instance.ObjectI) : Cell {
     override val type: String = obj.cls.name
-    override fun toString() = "<$type ${obj.id}>"
+    override fun toString() = "<$type>"
     override fun access(field: String): Cell = Cell.fromInstance(obj[field])
 }
