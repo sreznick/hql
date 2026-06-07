@@ -63,35 +63,74 @@ private fun printTree(expr: Expression, indent: String, out: Appendable = System
             out.appendLine("$indent[FUNCTION_CALL=${expr.name}]")
             expr.args.forEach { printTree(it, "$indent  |", out = out) }
         }
+        is Expression.Not -> {
+            out.appendLine("$indent[NOT]")
+            printTree(expr.expr, "$indent  |", out = out)
+        }
     }
 }
 
-sealed class DataSource {
-    data class Class(val name: String) : DataSource() {
+enum class JoinType {
+    INNER, LEFT, RIGHT, FULL
+}
+
+sealed class Target {
+    data class Class(val name: String, val alias: String) : Target() {
         override fun print(indent: String, out: Appendable) {
-            out.appendLine("$indent -> Target Class: $name")
+            out.appendLine("$indent    Class $name")
         }
     }
-    data class Subquery(val ast: QueryAST) : DataSource() {
+    data class Subquery(val ast: QueryAST, val alias: String) : Target() {
         override fun print(indent: String, out: Appendable) {
-            out.appendLine("$indent -> Target Subquery:")
+            out.appendLine("$indent    Subquery")
             ast.printQuery(indent = "$indent    | ", out = out)
+        }
+    }
+
+    data class Join(
+        val left: Target,
+        val right: Target,
+        val expr: Expression,
+        val type: JoinType,
+        val alias: String
+    ) : Target() {
+        override fun print(indent: String, out: Appendable) {
+            out.appendLine("$indent    Join")
+            out.appendLine("$indent    | Type: ${type.name}")
+            out.appendLine("$indent    | Join condition:")
+            printTree(expr, indent = "$indent    |   ", out = out)
+            out.appendLine("$indent    | Left:")
+            left.print(indent = "$indent    |   ", out = out)
+            out.appendLine("$indent    | Right:")
+            right.print(indent = "$indent    |   ", out = out)
         }
     }
 
     abstract fun print(indent: String = "", out: Appendable = System.out)
 }
 
+data class NamedExpression(
+    val expr: Expression,
+    val name: String
+) {
+    companion object {
+        fun List<NamedExpression>.asMap(): Map<String, Expression> =
+            associate { it.name to it.expr }
+    }
+}
+
 data class QueryAST(
-    val target: DataSource,
-    val columns: List<Expression> = emptyList(),
-    val columnNames: List<String> = emptyList(),
+    val target: Target,
+    val columns: List<NamedExpression> = emptyList(),
     val filter: Expression? = null,
     val orderBy: List<Pair<Expression, SortOrder>> = emptyList(), // <sort, sortDescending>
+    val groupBy: List<NamedExpression> = emptyList(),
+    val having: Expression? = null,
     val limit: Int? = null,
     val offset: Int? = null
 ) {
     fun printQuery(indent: String = "", out: Appendable = System.out) {
+        out.appendLine("$indent -> Target:")
         target.print(indent = indent, out = out)
 
         out.append("$indent -> Columns:      ")
@@ -99,12 +138,12 @@ data class QueryAST(
             out.appendLine("${indent}ALL")
         else {
             out.appendLine()
-            columns.forEach { printTree(it, indent = "$indent    ", out = out) }
+            columns.forEach { printTree(it.expr, indent = "$indent    ", out = out) }
         }
         out.appendLine("$indent -> Limit:        ${limit ?: "All"}")
         out.appendLine("$indent -> Order:        ")
         if (orderBy.isEmpty()) {
-            out.appendLine("${indent}NONE")
+            out.appendLine("$indent      NONE")
         } else {
             out.appendLine()
             orderBy.forEach { (expr, order) ->
@@ -120,26 +159,55 @@ data class QueryAST(
         } else {
             out.appendLine("$indent    (No filter)")
         }
+
+        out.append("$indent -> Group:      ")
+        if (groupBy.isEmpty())
+            out.appendLine("$indent      NONE")
+        else {
+            out.appendLine()
+            groupBy.forEach { printTree(it.expr, indent = "$indent    ", out = out) }
+        }
     }
 
     companion object {
+        private fun targetFromContext(ctx: ExprParser.TableContext): Target {
+            val alias = ctx.name?.text ?: ctx.className()?.text ?: $$"$selectResult"
+            val a = ctx.className()?.let { Target.Class(it.text, alias) } ?:
+                Target.Subquery(createFromContext(ctx.selectQuery()), alias)
+
+            return ctx.joinClause()?.let { joinCtx ->
+                val joinType = joinCtx.LEFT()?.let {
+                    JoinType.LEFT
+                } ?: joinCtx.RIGHT()?.let {
+                    JoinType.RIGHT
+                } ?: joinCtx.FULL()?.let {
+                    JoinType.FULL
+                } ?: JoinType.INNER
+                Target.Join(
+                    left = a,
+                    right = targetFromContext(joinCtx.right),
+                    type = joinType,
+                    expr = mapExpression(joinCtx.expr),
+                    alias = $$"$joinResult"
+                )
+            } ?: a
+        }
+
         private fun createFromContext(selectCtx: ExprParser.SelectQueryContext): QueryAST {
             // 1. Имя класса либо подзапрос (используем метку target из грамматики)
-            val target = selectCtx.target.run {
-                className()?.let { DataSource.Class(it.text) } ?:
-                DataSource.Subquery(createFromContext(selectQuery()))
-            }
+            val target = targetFromContext(selectCtx.target)
 
             // 2. Обработка колонок (раз уж ты добавил их в грамматику)
-            val columnsList = mutableListOf<Expression>()
-            val columnNames = mutableListOf<String>()
+            val columns = mutableListOf<NamedExpression>()
             val columnsCtx = selectCtx.columns()
             if (columnsCtx.STAR() == null) {
                 // Если не звездочка, собираем список имен
                 columnsCtx.columnList()?.column()?.forEach { column ->
                     val expr = column.expression()
-                    columnsList.add(mapExpression(expr))
-                    columnNames.add(column.name?.text ?: expr.text)
+                    columns.add(NamedExpression(
+                        mapExpression(expr),
+                        column.name?.text ?: expr.text
+                    ))
                 }
             }
             // Если список пуст — значит выбраны все (*)
@@ -176,14 +244,35 @@ data class QueryAST(
                 }
             }
 
+            // 7. Группировка вывода GROUP BY
+            val groupClauses = selectCtx.additionalClause().mapNotNull { it.groupClause() }
+            val groupBy = mutableListOf<NamedExpression>()
+            if (groupClauses.isNotEmpty()) {
+                val elements = groupClauses.single().columnList().column()
+                elements.forEach { column ->
+                    val expr = column.expression()
+                    groupBy.add(NamedExpression(
+                        mapExpression(expr),
+                        column.name?.text ?: expr.text
+                    ))
+                }
+            }
+
+            // 8. Фильтрация сгруппированных строк HAVING
+            val havingClauses = selectCtx.additionalClause().mapNotNull { it.havingClause() }
+            val havingExpr =
+                if (havingClauses.isEmpty()) null
+                else mapExpression(havingClauses.single().expression())
+
             return QueryAST(
                 target = target,
+                columns = columns,
                 filter = filterExpr,
                 limit = limitValue,
                 offset = offsetValue,
                 orderBy = orderByList,
-                columns = columnsList,
-                columnNames = columnNames
+                groupBy = groupBy,
+                having = havingExpr,
             )
         }
 
@@ -286,6 +375,12 @@ data class QueryAST(
                     Expression.Or(
                         left = mapExpression(ctx.left),
                         right = mapExpression(ctx.right)
+                    )
+                }
+                // Случай: NOT expr
+                is ExprParser.NotExprContext -> {
+                    Expression.Not(
+                        expr = mapExpression(ctx.expr)
                     )
                 }
 

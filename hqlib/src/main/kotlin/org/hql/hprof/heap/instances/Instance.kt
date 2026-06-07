@@ -1,5 +1,6 @@
 package org.hql.hprof.heap.instances
 
+import org.hql.ColumnNotFoundException
 import org.hql.hprof.heap.Class
 import org.hql.hprof.heap.Identifier
 
@@ -52,7 +53,8 @@ sealed class Instance {
         }
 
         override fun toString() = "<instance of class ${cls.name}>"
-        operator fun get(name: String): Instance = fields.getValue(name)
+        operator fun get(name: String): Instance = fields[name] ?:
+            throw ColumnNotFoundException(name, fields.keys.toList())
     }
 
     companion object {

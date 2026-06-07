@@ -29,6 +29,9 @@ interface Cell : Comparable<Cell> {
     infix fun or(other: Cell): Cell {
         throw IncompatibleTypesException("OR operation", type, other.type)
     }
+    operator fun not(): Cell {
+        throw IncompatibleTypesException("NOT operation", type)
+    }
 
     fun access(field: String): Cell {
         throw IncompatibleTypesException("accessing a field $field", type)
@@ -63,7 +66,7 @@ data object NullCell : Cell {
     }
 }
 
-class BooleanCell(val v: Boolean) : Cell {
+data class BooleanCell(val v: Boolean) : Cell {
     override val type: String = "boolean"
     override fun toString() = "$v"
     override fun compareTo(other: Cell): Int {
@@ -77,6 +80,9 @@ class BooleanCell(val v: Boolean) : Cell {
     override fun or(other: Cell): Cell {
         if (other is BooleanCell) return BooleanCell(v || other.v)
         return super.and(other)
+    }
+    override fun not(): Cell {
+        return BooleanCell(!v)
     }
 }
 
@@ -160,7 +166,7 @@ data class IntCell(val v: Long) : Cell {
 }
 
 data class ArrayCell(val instance: Instance.ArrayI) : Cell {
-    override val type: String = if (instance.values.isEmpty()) "[]" else "[${this[0].type}]"
+    override val type: String = if (instance.values.isEmpty()) "array<>" else "array<${this[0].type}>"
     operator fun get(i: Int) = Cell.fromInstance(instance.values[i])
     override fun toString() = instance.values.indices
         .map { i -> this[i] }
@@ -187,15 +193,38 @@ data class StringCell(val value: String) : Cell {
 
 data class ClassCell(val cls: Class) : Cell {
     override val type: String = "class"
-    override fun toString() = "<class object ${cls.name}>"
+    override fun toString() = "class<${cls.name}>"
     override fun compareTo(other: Cell): Int {
         if (other is ClassCell) return cls.id.compareTo(other.cls.id)
         return super.compareTo(other)
     }
+    override fun equals(other: Any?): Boolean {
+        return other is ClassCell && cls.id == other.cls.id
+    }
+    override fun hashCode(): Int = cls.id.hashCode()
 }
 
 class ObjectCell(val obj: Instance.ObjectI) : Cell {
     override val type: String = obj.cls.name
-    override fun toString() = "<$type>"
+    override fun toString() = "object<$type>"
     override fun access(field: String): Cell = Cell.fromInstance(obj[field])
+    override fun equals(other: Any?): Boolean {
+        return other is ObjectCell && obj.id == other.obj.id
+    }
+    override fun hashCode(): Int = obj.id.hashCode()
+}
+
+class AggregateCell(val cells: List<Cell>) : Cell {
+    override val type: String = "aggregate<${cells.first().type}>"
+    override fun toString() = "<several values>"
+    override fun equals(other: Any?): Boolean {
+        return other is AggregateCell && cells == other.cells
+    }
+    override fun hashCode(): Int = cells.hashCode()
+}
+
+class RowCell(val row: Row) : Cell {
+    override val type: String = "row"
+    override fun toString() = "<row>"
+    override fun access(field: String): Cell = row[field]
 }
