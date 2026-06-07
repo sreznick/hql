@@ -130,3 +130,42 @@ queries:
       6  | -     | nye
       6  | -     | rqk
       2  | -     | fur
+
+  - query: "select t0.id as id, t0.name as nameA, t1.name as nameB from ClassA as t0 join ClassB as t1 on t0.id = t1.id"
+    expected: |
+      id | nameA | nameB
+      3  | qnf   | pqd  
+      4  | oyi   | nyo  
+      4  | oyi   | utl  
+      4  | oyi   | toq  
+      4  | oyi   | qkd  
+      4  | oyi   | wkz  
+      3  | nqw   | pqd  
+  
+  - query: "select * from ClassA as t0 join ClassA as t1 on t0.id = t1.id"
+    expected: |
+      t0.name | t0.id | t1.name | t1.id
+      qnf     | 3     | qnf     | 3    
+      qnf     | 3     | nqw     | 3    
+      mai     | 9     | mai     | 9    
+      mai     | 9     | ymu     | 9    
+      mai     | 9     | vbj     | 9    
+      kez     | 8     | kez     | 8    
+      kez     | 8     | dqt     | 8    
+      kez     | 8     | wtn     | 8    
+      oyi     | 4     | oyi     | 4    
+      fpa     | 10    | fpa     | 10   
+      dqt     | 8     | kez     | 8    
+      dqt     | 8     | dqt     | 8    
+      dqt     | 8     | wtn     | 8    
+      ymu     | 9     | mai     | 9    
+      ymu     | 9     | ymu     | 9    
+      ymu     | 9     | vbj     | 9    
+      nqw     | 3     | qnf     | 3    
+      nqw     | 3     | nqw     | 3    
+      vbj     | 9     | mai     | 9    
+      vbj     | 9     | ymu     | 9    
+      vbj     | 9     | vbj     | 9    
+      wtn     | 8     | kez     | 8    
+      wtn     | 8     | dqt     | 8    
+      wtn     | 8     | wtn     | 8

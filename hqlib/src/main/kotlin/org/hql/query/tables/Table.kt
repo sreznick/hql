@@ -20,13 +20,17 @@ import org.hql.query.rows.JoinRow
  */
 abstract class Table {
     /** The name of the table */
-    lateinit var name: String
+    protected abstract val name: String
 
     /** The full set of column names this table is known to expose by default */
     protected abstract val baseColumns: List<String>
 
     /** The base rows on which select operates */
     protected abstract val rows: List<Row>
+
+    fun withName(name: String): Table {
+        return SimpleTable(name, baseColumns, rows)
+    }
 
     fun select(
         columns: List<NamedExpression>,
@@ -35,7 +39,8 @@ abstract class Table {
         groupBy: List<NamedExpression>,
         having: Expression?,
         limit: Int?,
-        offset: Int?
+        offset: Int?,
+        alias: String?
     ): Table {
         val outputColumns = columns.map { it.name }.ifEmpty { baseColumns }
         val columnsAsMap = columns.asMap()
@@ -112,7 +117,7 @@ abstract class Table {
         offset?.let { processed = processed.drop(it) }
         limit?.let { processed = processed.take(it) }
 
-        return SimpleTable(name, outputColumns, processed)
+        return SimpleTable(alias ?: name, outputColumns, processed)
     }
 
     fun join(other: Table, expr: Expression, type: JoinType, alias: String): Table {

@@ -7,11 +7,7 @@ import org.hql.query.Row
  * Useful for return values of operations on other tables.
  */
 class SimpleTable<R : Row>(
-    name: String,
+    override val name: String,
     override val baseColumns: List<String>,
     override val rows: List<R>
-) : Table() {
-    init {
-        this.name = name
-    }
-}
+) : Table()

@@ -16,9 +16,7 @@ import org.hql.query.expressions.BuiltinFunctions
  * Table implementation over coroutine data extracted from a heap dump
  */
 class CoroutineTable(heap: Heap) : Table() {
-    init {
-        this.name = "coroutines"
-    }
+    override val name = "coroutines"
 
     override val baseColumns: List<String> = DEFAULT_COLUMNS
 

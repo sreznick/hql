@@ -10,16 +10,16 @@ import org.hql.query.tables.Table
 class Database(val heap: Heap) {
     val tables = hashMapOf<String, Table>()
 
-    fun getTable(name: String, alias: String): Table = tables.getOrPut(name) {
+    fun getTable(name: String): Table = tables.getOrPut(name) {
         when (name) {
             "coroutines" -> CoroutineTable(heap)
-            else -> ClassTable(alias, heap.getClassByName(name))
+            else -> ClassTable(heap.getClassByName(name))
         }
     }
 
     fun targetToTable(target: Target): Table {
         return when (target) {
-            is Target.Class -> getTable(target.name, target.alias)
+            is Target.Class -> getTable(target.name).withName(target.alias)
             is Target.Subquery -> query(target.ast, target.alias)
             is Target.Join -> {
                 val left = targetToTable(target.left)
@@ -39,10 +39,8 @@ class Database(val heap: Heap) {
             having = ast.having,
             limit = ast.limit,
             offset = ast.offset,
+            alias = alias
         )
-        alias?.let {
-            result.name = alias
-        }
         return result
     }
 
