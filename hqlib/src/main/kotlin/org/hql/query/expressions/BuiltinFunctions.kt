@@ -33,48 +33,51 @@ data class FunctionScope(
     }
 
     fun stringArgument(index: Int): String {
-        val cell = args[index]
-        return (cell as? StringCell)?.value
-            ?: throw HQLQueryException("$name: argument ${index + 1} must be a string (provided: ${cell.type})")
+        return when (val cell = args[index]) {
+            is StringCell -> cell.value
+            else -> throw HQLQueryException("$name: argument ${index + 1} must be a string (provided: ${cell.type})")
+        }
     }
     fun booleanArgument(index: Int): Boolean {
-        val cell = args[index]
-        return (cell as? BooleanCell)?.v
-            ?: throw HQLQueryException("$name: argument $index must be a boolean (provided: ${cell.type})")
+        return when (val cell = args[index]) {
+            is BooleanCell -> cell.v
+            else -> throw HQLQueryException("$name: argument $index must be a boolean (provided: ${cell.type})")
+        }
     }
     fun numberArgument(index: Int): Double {
-        val cell = args[index]
-        return (cell as? IntCell)?.v?.toDouble()
-            ?: (cell as? FloatCell)?.v
-            ?: throw HQLQueryException("$name: argument $index must be a number (provided: ${cell.type})")
+        return when (val cell = args[index]) {
+            is IntCell -> cell.v.toDouble()
+            is FloatCell -> cell.v
+            else -> throw HQLQueryException("$name: argument $index must be a number (provided: ${cell.type})")
+        }
     }
     fun intArgument(index: Int): Long {
-        val cell = args[index]
-        return (cell as? IntCell)?.v
-            ?: throw HQLQueryException("$name: argument $index must be an integer (provided: ${cell.type})")
+        return when (val cell = args[index]) {
+            is IntCell -> cell.v
+            else -> throw HQLQueryException("$name: argument $index must be an integer (provided: ${cell.type})")
+        }
     }
     fun aggregateArgument(index: Int): List<Cell> {
-        val cell = args[index]
-        return (cell as? AggregateCell)?.cells
-            ?: listOf(cell)
+        return when (val cell = args[index]) {
+            is AggregateCell -> cell.cells
+            else -> listOf(cell)
+        }
     }
     fun argumentsAsNumberList(): List<Double> {
-        val values = mutableListOf<Double>()
-        args.forEachIndexed { i, cell ->
+        return args.flatMapIndexed { i, cell ->
             when (cell) {
-                is IntCell -> values.add(cell.v.toDouble())
-                is FloatCell -> values.add(cell.v)
-                is AggregateCell -> cell.cells.forEach { aggCell ->
+                is IntCell -> listOf(cell.v.toDouble())
+                is FloatCell -> listOf(cell.v)
+                is AggregateCell -> cell.cells.map { aggCell ->
                     when (aggCell) {
-                        is IntCell -> values.add(aggCell.v.toDouble())
-                        is FloatCell -> values.add(aggCell.v)
+                        is IntCell -> aggCell.v.toDouble()
+                        is FloatCell -> aggCell.v
                         else -> throw HQLQueryException("$name: arguments should be numbers or aggregates of numbers (argument ${i + 1} was ${cell.type})")
                     }
                 }
                 else -> throw HQLQueryException("$name: arguments should be numbers or aggregates of numbers (argument ${i + 1} was ${cell.type})")
             }
         }
-        return values
     }
 
     fun singleStringArgument(): String {
@@ -93,14 +96,9 @@ object BuiltinFunctions {
         }
     }
 
-    fun call(name: String, row: Row, args: List<Cell>): Cell {
-        val fn = functions[name.lowercase()] ?: error("Unknown function: $name")
-        val scope = FunctionScope(
-            name = name.lowercase(),
-            row = row,
-            args = args
-        )
-        return scope.fn()
+    operator fun get(functionName: String): FunctionScope.() -> Cell {
+        return functions[functionName.lowercase()] ?:
+            throw HQLQueryException("Unknown function '$functionName'")
     }
 
     init {

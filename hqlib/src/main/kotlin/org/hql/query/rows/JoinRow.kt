@@ -1,6 +1,6 @@
 package org.hql.query.rows
 
-import org.hql.HQLException
+import org.hql.ColumnNotFoundException
 import org.hql.HQLQueryException
 import org.hql.query.Cell
 import org.hql.query.NullCell
@@ -18,31 +18,30 @@ class JoinRow(
     val secondRow: Row,
 ): Row {
     override fun get(column: String): Cell {
-        if (column == firstTableName)
-            return RowCell(firstRow)
-        if (column == secondTableName)
-            return RowCell(secondRow)
-        if (column.startsWith(firstTableName))
-            return firstRow[column.removePrefix("$firstTableName.")]
-        if (column.startsWith(secondTableName))
-            return secondRow[column.removePrefix("$secondTableName.")]
+        return when {
+            column == firstTableName -> RowCell(firstRow)
+            column == secondTableName -> RowCell(secondRow)
+            column.startsWith(firstTableName) -> firstRow[column.removePrefix("$firstTableName.")]
+            column.startsWith(secondTableName) -> secondRow[column.removePrefix("$secondTableName.")]
+            else -> {
+                val firstCell = try {
+                    firstRow[column]
+                } catch (_: ColumnNotFoundException) {
+                    null
+                }
+                val secondCell = try {
+                    secondRow[column]
+                } catch (_: ColumnNotFoundException) {
+                    null
+                }
 
-        val firstCell = try {
-            firstRow[column]
-        } catch (_: HQLException) {
-            null
+                when {
+                    firstCell == null && secondCell == null -> NullCell
+                    firstCell != null -> firstCell
+                    secondCell != null -> secondCell
+                    else -> throw HQLQueryException("conflicting column name: $column")
+                }
+            }
         }
-        val secondCell = try {
-            secondRow[column]
-        } catch (_: HQLException) {
-            null
-        }
-        if (firstCell != null && secondCell != null) {
-            throw HQLQueryException("conflicting column name: $column")
-        }
-
-        firstCell?.let { return it }
-        secondCell?.let { return it }
-        return NullCell
     }
 }

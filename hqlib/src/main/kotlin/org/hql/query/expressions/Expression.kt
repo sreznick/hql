@@ -49,7 +49,14 @@ sealed class Expression {
     }
 
     data class FunctionCall(val name: String, val args: List<Expression>) : Expression() {
-        override fun eval(row: Row): Cell = BuiltinFunctions.call(name, row, args.map { it.eval(row) })
+        override fun eval(row: Row): Cell {
+            val fn = BuiltinFunctions[name]
+            return FunctionScope(
+                name = name.lowercase(),
+                row = row,
+                args = args.map { it.eval(row) }
+            ).fn()
+        }
     }
 
     data class Comparison(val left: Expression, val op: String, val right: Expression) : Expression() {

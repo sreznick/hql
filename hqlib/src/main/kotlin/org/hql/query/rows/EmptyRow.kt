@@ -11,9 +11,9 @@ import org.hql.query.Row
  */
 class EmptyRow(private val columns: List<String>): Row {
     override fun get(column: String): Cell {
-        if (columns.contains(column)) {
-            return NullCell
+        return when (column) {
+            in columns -> NullCell
+            else -> throw ColumnNotFoundException(column, columns)
         }
-        throw ColumnNotFoundException(column, columns)
     }
 }
