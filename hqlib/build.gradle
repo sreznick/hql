@@ -17,6 +17,7 @@ dependencies {
     testImplementation 'org.jetbrains.kotlin:kotlin-test'
     implementation "com.charleskorn.kaml:kaml:0.104.0"
     testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
+    testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
 
     antlr libs.antlr4 // use ANTLR version 4
 }
