@@ -5,3 +5,7 @@ queries:
     \ | -         | -          | \"parent\" | main   | 71180ac28 | TIMED_WAITING\n\
     7118ca868 | STANDALONE | SUSPENDED        | 71180ac08 | -          | \"child1\"\
     \ | -      | -         | -            "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \   | thread | thread_id | thread_state\n7118ca868 | STANDALONE | SUSPENDED |\
+    \ 71180ac08 | -          | \"child1\" | -      | -         | -           "

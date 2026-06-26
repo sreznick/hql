@@ -42,22 +42,26 @@ class CoroutineThreadLinker(private val heap: Heap) {
     // [onReach] for every object id visited. A visited set keeps the walk safe against the cyclic
     // and deeply-shared graphs these continuations form
     private fun walkContinuationChain(startId: Identifier, onReach: (Identifier) -> Unit) {
-        val visited = hashSetOf<Identifier>()
+        val visited = hashSetOf(startId)
         val pending = ArrayDeque<Identifier>().apply { addLast(startId) }
         while (pending.isNotEmpty()) {
             val id = pending.removeLast()
-            if (!visited.add(id)) continue
             onReach(id)
-            // Resolving an instance (and its fields / array elements) is eager and throws on a
-            // dangling reference — an id absent from the dump. Skip such objects rather than abort
-            // the whole correlation; they are never the continuation chain we're after
+            // Reading `fields` lazily resolves field names and values, which look up strings,
+            // classes and instances in the dump via Map.getValue — that throws NoSuchElementException
+            // on a dangling reference (an id present in a field but absent from the dump). Skip such
+            // objects rather than abort the whole correlation; they are never the chain we're after
             val fields = try {
                 heap.getObjectById(id)?.fields ?: continue
             } catch (_: NoSuchElementException) {
                 continue
             }
             for (field in CHAIN_FIELDS) {
-                (fields[field] as? Instance.ObjectI)?.let { pending.addLast(it.id) }
+                // mark visited on enqueue (not on dequeue) so a node shared by many edges is added
+                // to the queue at most once, keeping `pending` bounded on densely-linked graphs
+                (fields[field] as? Instance.ObjectI)
+                    ?.takeIf { visited.add(it.id) }
+                    ?.let { pending.addLast(it.id) }
             }
         }
     }

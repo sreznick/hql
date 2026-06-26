@@ -10,3 +10,9 @@ queries:
 - query: "select id, name, dispatcher from coroutines"
   expected: "id        | name     | dispatcher\n7118156b0 | \"parent\" | DEFAULT \
     \  \n7118d7518 | \"child2\" | DEFAULT   \n7118d77d0 | \"child1\" | IO        "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \   | thread | thread_id | thread_state\n7118d7518 | STANDALONE | SUSPENDED |\
+    \ 7118156b0 | DEFAULT    | \"child2\" | -      | -         | -           \n7118d77d0\
+    \ | STANDALONE | SUSPENDED | 7118156b0 | IO         | \"child1\" | -      | -\
+    \         | -           "

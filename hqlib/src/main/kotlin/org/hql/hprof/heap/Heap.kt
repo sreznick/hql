@@ -25,8 +25,9 @@ class Heap(private val hprof: Hprof) {
         get() = hprof.frameRootsByThreadObjectId
 
     // resolves id to its object instance, or null if the id is null or absent from the dump
-    fun getObjectById(id: Identifier): Instance.ObjectI? {
-        if (id.isNull() || !hprof.instances.containsKey(id)) return null
-        return Instance.createObject(hprof, id) as? Instance.ObjectI
+    fun getObjectById(id: Identifier): Instance.ObjectI? = when {
+        id.isNull() -> null
+        !hprof.instances.containsKey(id) -> null
+        else -> Instance.createObject(hprof, id) as? Instance.ObjectI
     }
 }

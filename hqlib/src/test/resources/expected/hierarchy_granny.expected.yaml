@@ -10,3 +10,7 @@ queries:
 - query: "select id, parent from coroutines"
   expected: "id        | parent   \n711800160 | -        \n711956fa8 | 711800160\n\
     711957048 | 711956fa8"
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \  | thread | thread_id | thread_state\n711957048 | STANDALONE | SUSPENDED | 711956fa8\
+    \ | -          | \"child\" | -      | -         | -           "

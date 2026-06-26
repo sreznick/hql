@@ -6,3 +6,10 @@ queries:
     \ | STANDALONE | SUSPENDED | 71180ac08 | -          | \"child2\" | -      | -\
     \         | -            \n711918b70 | STANDALONE | SUSPENDED | 71180ac08 | -\
     \          | \"child1\" | -      | -         | -            "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \   | thread | thread_id | thread_state \n71180ac08 | BLOCKING   | SUSPENDED |\
+    \ -         | -          | \"parent\" | main   | 71180ac28 | TIMED_WAITING\n711918a08\
+    \ | STANDALONE | SUSPENDED | 71180ac08 | -          | \"child2\" | -      | -\
+    \         | -            \n711918b70 | STANDALONE | SUSPENDED | 71180ac08 | -\
+    \          | \"child1\" | -      | -         | -            "

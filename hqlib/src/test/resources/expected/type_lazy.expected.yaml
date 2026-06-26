@@ -5,3 +5,7 @@ queries:
     \ WAITING_CHILDREN | -         | -          | -      | main   | 711820178 | TIMED_WAITING\n\
     7118c7e20 | LAZY_STANDALONE | SUSPENDED        | 711820158 | -          | \"lazy\"\
     \ | -      | -         | -            "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type            | state     | parent    | dispatcher | name\
+    \   | thread | thread_id | thread_state\n7118c7e20 | LAZY_STANDALONE | SUSPENDED\
+    \ | 711820158 | -          | \"lazy\" | -      | -         | -           "

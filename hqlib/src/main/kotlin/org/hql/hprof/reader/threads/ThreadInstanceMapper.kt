@@ -22,33 +22,16 @@ object ThreadInstanceMapper : ThreadMapper {
         ThreadRow(
             instance = instance,
             className = instance.cls.name,
-            name = instance.threadField("name").asString(),
-            state = ThreadState.fromThreadStatus(instance.threadField("threadStatus").asInt()),
-            daemon = instance.threadField("daemon").asBoolean(),
-            priority = instance.threadField("priority").asInt(),
-            tid = instance.threadField("tid").asLong()
+            name = instance.threadField("name")?.asString(),
+            state = ThreadState.fromThreadStatus(instance.threadField("threadStatus")?.asInt()),
+            daemon = instance.threadField("daemon")?.asBoolean(),
+            priority = instance.threadField("priority")?.asInt(),
+            tid = instance.threadField("tid")?.asLong()
         )
 
     // Looks up a Thread field on the instance, falling back to the JDK 19+ `holder` sub-object.
     private fun Instance.ObjectI.threadField(name: String): Instance? {
         fields[name]?.let { return it }
         return (fields["holder"] as? Instance.ObjectI)?.fields?.get(name)
-    }
-
-    private fun Instance?.asString(): String? = (this as? Instance.StringI)?.value
-
-    private fun Instance?.asBoolean(): Boolean? = (this as? Instance.BooleanI)?.v
-
-    private fun Instance?.asInt(): Int? = when (this) {
-        is Instance.IntI -> v
-        is Instance.ShortI -> v.toInt()
-        is Instance.ByteI -> v.toInt()
-        else -> null
-    }
-
-    private fun Instance?.asLong(): Long? = when (this) {
-        is Instance.LongI -> v
-        is Instance.IntI -> v.toLong()
-        else -> null
     }
 }

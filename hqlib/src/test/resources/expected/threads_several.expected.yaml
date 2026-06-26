@@ -1,0 +1,81 @@
+queries:
+- query: "select * from threads"
+  expected: "id        | name                       | state         | daemon | priority\
+    \ | tid | class                                                  \n704c37f48 |\
+    \ main                       | TIMED_WAITING | false  | 5        | 1   | java.lang.Thread\
+    \                                       \n704c3b8f0 | Reference Handler      \
+    \    | RUNNABLE      | true   | 10       | 2   | java.lang.ref.Reference$ReferenceHandler\
+    \               \n704c3bd80 | Finalizer                  | WAITING       | true\
+    \   | 8        | 3   | java.lang.ref.Finalizer$FinalizerThread               \
+    \ \n704c5dff8 | Signal Dispatcher          | RUNNABLE      | true   | 9      \
+    \  | 4   | java.lang.Thread                                       \n704c5e1d8\
+    \ | Attach Listener            | RUNNABLE      | true   | 5        | 5   | java.lang.Thread\
+    \                                       \n704ca85f8 | Notification Thread    \
+    \    | RUNNABLE      | true   | 9        | 13  | java.lang.Thread            \
+    \                           \n704cabe58 | Common-Cleaner             | TIMED_WAITING\
+    \ | true   | 8        | 14  | jdk.internal.misc.InnocuousThread              \
+    \        \n704c1cc08 | DefaultDispatcher-worker-1 | RUNNABLE      | true   | 5\
+    \        | 15  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n704c2d258\
+    \ | DefaultDispatcher-worker-2 | WAITING       | true   | 5        | 16  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    704c2fb20 | DefaultDispatcher-worker-3 | TIMED_WAITING | true   | 5        | 17\
+    \  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n704c30070 | DefaultDispatcher-worker-4\
+    \ | BLOCKED       | true   | 5        | 18  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    704c304f0 | DefaultDispatcher-worker-5 | TIMED_WAITING | true   | 5        | 19\
+    \  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n704e04958 | DefaultDispatcher-worker-6\
+    \ | TIMED_WAITING | true   | 5        | 20  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    704e04da8 | DefaultDispatcher-worker-7 | TIMED_WAITING | true   | 5        | 21\
+    \  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n704e888f8 | JFR\
+    \ Recorder Thread        | RUNNABLE      | true   | 5        | 22  | java.lang.Thread\
+    \                                       \n704c010d8 | JFR Periodic Tasks     \
+    \    | TIMED_WAITING | true   | 5        | 23  | java.lang.Thread            \
+    \                           "
+- query: "select name, state, daemon, priority, class from threads"
+  expected: "name                       | state         | daemon | priority | class\
+    \                                                  \nmain                    \
+    \   | TIMED_WAITING | false  | 5        | java.lang.Thread                   \
+    \                    \nReference Handler          | RUNNABLE      | true   | 10\
+    \       | java.lang.ref.Reference$ReferenceHandler               \nFinalizer \
+    \                 | WAITING       | true   | 8        | java.lang.ref.Finalizer$FinalizerThread\
+    \                \nSignal Dispatcher          | RUNNABLE      | true   | 9   \
+    \     | java.lang.Thread                                       \nAttach Listener\
+    \            | RUNNABLE      | true   | 5        | java.lang.Thread          \
+    \                             \nNotification Thread        | RUNNABLE      | true\
+    \   | 9        | java.lang.Thread                                       \nCommon-Cleaner\
+    \             | TIMED_WAITING | true   | 8        | jdk.internal.misc.InnocuousThread\
+    \                      \nDefaultDispatcher-worker-1 | RUNNABLE      | true   |\
+    \ 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\nDefaultDispatcher-worker-2\
+    \ | WAITING       | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    DefaultDispatcher-worker-3 | TIMED_WAITING | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    DefaultDispatcher-worker-4 | BLOCKED       | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    DefaultDispatcher-worker-5 | TIMED_WAITING | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    DefaultDispatcher-worker-6 | TIMED_WAITING | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    DefaultDispatcher-worker-7 | TIMED_WAITING | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    JFR Recorder Thread        | RUNNABLE      | true   | 5        | java.lang.Thread\
+    \                                       \nJFR Periodic Tasks         | TIMED_WAITING\
+    \ | true   | 5        | java.lang.Thread                                     \
+    \  "
+- query: "select name, state from threads where class = 'kotlinx.coroutines.scheduling.CoroutineScheduler$Worker'"
+  expected: "name                       | state        \nDefaultDispatcher-worker-1\
+    \ | RUNNABLE     \nDefaultDispatcher-worker-2 | WAITING      \nDefaultDispatcher-worker-3\
+    \ | TIMED_WAITING\nDefaultDispatcher-worker-4 | BLOCKED      \nDefaultDispatcher-worker-5\
+    \ | TIMED_WAITING\nDefaultDispatcher-worker-6 | TIMED_WAITING\nDefaultDispatcher-worker-7\
+    \ | TIMED_WAITING"
+- query: "select * from coroutines"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name       | thread                     | thread_id | thread_state \n705c5c0c0\
+    \ | BLOCKING   | WAITING_CHILDREN | -         | -          | -          | main\
+    \                       | 704c37f48 | TIMED_WAITING\n704c1a408 | STANDALONE |\
+    \ ACTIVE           | 705c5c0c0 | IO         | \"runnable\" | DefaultDispatcher-worker-1\
+    \ | 704c1cc08 | RUNNABLE     \n704c2d8c0 | STANDALONE | ACTIVE           | 705c5c0c0\
+    \ | IO         | \"timed\"    | DefaultDispatcher-worker-3 | 704c2fb20 | TIMED_WAITING\n\
+    704c2f2a8 | STANDALONE | ACTIVE           | 705c5c0c0 | IO         | \"waiting\"\
+    \  | DefaultDispatcher-worker-2 | 704c2d258 | WAITING      \n704c2f570 | STANDALONE\
+    \ | ACTIVE           | 705c5c0c0 | IO         | \"holder\"   | DefaultDispatcher-worker-5\
+    \ | 704c304f0 | TIMED_WAITING\n704e04228 | STANDALONE | ACTIVE           | 705c5c0c0\
+    \ | IO         | \"blocked\"  | DefaultDispatcher-worker-4 | 704c30070 | BLOCKED\
+    \      "
+- query: "select * from coroutines where is_blocked()"
+  expected: "id        | type       | state  | parent    | dispatcher | name     \
+    \ | thread                     | thread_id | thread_state\n704e04228 | STANDALONE\
+    \ | ACTIVE | 705c5c0c0 | IO         | \"blocked\" | DefaultDispatcher-worker-4\
+    \ | 704c30070 | BLOCKED     "

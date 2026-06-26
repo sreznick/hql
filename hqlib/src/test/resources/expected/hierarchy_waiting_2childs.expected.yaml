@@ -7,3 +7,9 @@ queries:
     \ | -      | -         | -            \n71186a778 | STANDALONE | SUSPENDED   \
     \     | 7118156b0 | -          | \"child1\" | -      | -         | -         \
     \   "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \   | thread | thread_id | thread_state\n71186a6e8 | STANDALONE | SUSPENDED |\
+    \ 7118156b0 | -          | \"child2\" | -      | -         | -           \n71186a778\
+    \ | STANDALONE | SUSPENDED | 7118156b0 | -          | \"child1\" | -      | -\
+    \         | -           "

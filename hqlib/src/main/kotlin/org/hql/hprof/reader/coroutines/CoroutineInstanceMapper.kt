@@ -51,11 +51,10 @@ object CoroutineInstanceMapper : CoroutineMapper {
         // (StackOverflowError). A revisit means we've gone all the way around the ring without
         // finding a more specific marker — the job just has a handler list and is still active.
         seen: MutableSet<Identifier> = mutableSetOf(),
-    ): CoroutineState {
-        if (this == null) return CoroutineState.UNKNOWN
-        if (!seen.add(id)) return CoroutineState.ACTIVE
-
-        return when (cls.name) {
+    ): CoroutineState = when {
+        this == null -> CoroutineState.UNKNOWN
+        !seen.add(id) -> CoroutineState.ACTIVE
+        else -> when (cls.name) {
             "kotlinx.coroutines.ChildContinuation",
             "kotlinx.coroutines.CancellableContinuationImpl" ->
                 if (asCoroutine) CoroutineState.SUSPENDED else CoroutineState.WAITING_CHILDREN

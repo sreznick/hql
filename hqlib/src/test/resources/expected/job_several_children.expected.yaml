@@ -13,3 +13,7 @@ queries:
   expected: "id        | name   | descendants_count()\n703651728 | \"root\" | 0  \
     \                \n703629788 | \"ch1\"  | 0                  \n70363c5b0 | \"\
     ch2\"  | 0                  \n703628b88 | -      | 2                  "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  |\
+    \ thread | thread_id | thread_state\n703629788 | STANDALONE | SUSPENDED | 703628b88\
+    \ | IO         | \"ch1\" | -      | -         | -           "

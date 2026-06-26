@@ -6,3 +6,7 @@ queries:
     7118740b8 | STANDALONE | SUSPENDED        | 711874138 | -          | \"scope\"\
     \  | -      | -         | -            \n711874138 | SCOPE      | WAITING_CHILDREN\
     \ | 71180ac08 | -          | \"parent\" | -      | -         | -            "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \  | thread | thread_id | thread_state\n7118740b8 | STANDALONE | SUSPENDED | 711874138\
+    \ | -          | \"scope\" | -      | -         | -           "

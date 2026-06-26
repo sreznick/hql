@@ -6,3 +6,9 @@ queries:
     703211df0 | STANDALONE | SUSPENDED        | 7032111f0 | IO         | \"ch\"  \
     \ | -      | -         | -            \n7032111f0 | JOB        | WAITING_CHILDREN\
     \ | -         | -          | -      | -      | -         | -            "
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \ | thread | thread_id | thread_state \n707218028 | BLOCKING   | SUSPENDED | -\
+    \         | -          | \"root\" | main   | 70322f8e8 | TIMED_WAITING\n703211df0\
+    \ | STANDALONE | SUSPENDED | 7032111f0 | IO         | \"ch\"   | -      | -  \
+    \       | -            "

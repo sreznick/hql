@@ -49,3 +49,10 @@ queries:
   expected: "id        | type | state            | parent    | dispatcher | name |\
     \ thread | thread_id | thread_state \n703247ad8 | JOB  | WAITING_CHILDREN | 703246f30\
     \ | -          | -    | main   | 703266e48 | TIMED_WAITING"
+- query: "select * from coroutines where is_suspended()"
+  expected: "id        | type       | state     | parent    | dispatcher | name  \
+    \    | thread | thread_id | thread_state\n703248020 | STANDALONE | SUSPENDED |\
+    \ 703246f30 | IO         | \"grandma\" | -      | -         | -           \n70325c2c8\
+    \ | STANDALONE | SUSPENDED | 703247ad8 | IO         | \"mom\"     | -      | -\
+    \         | -           \n70661c360 | STANDALONE | SUSPENDED | 703247b10 | IO\
+    \         | \"child\"   | -      | -         | -           "
