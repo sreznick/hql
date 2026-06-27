@@ -91,14 +91,18 @@ class HprofReader(inputStream: InputStream) {
                     stream.readIdentifier()
                 }
                 0x02 -> {
-                    stream.readIdentifier()
+                    // ROOT JNI LOCAL: object id, thread serial number, frame number
+                    val objectId = stream.readIdentifier()
+                    val threadSerial = stream.readInt()
                     stream.readInt()
-                    stream.readInt()
+                    hprof.addFrameRoot(threadSerial, objectId)
                 }
                 0x03 -> {
-                    stream.readIdentifier()
+                    // ROOT JAVA FRAME: object id, thread serial number, frame number
+                    val objectId = stream.readIdentifier()
+                    val threadSerial = stream.readInt()
                     stream.readInt()
-                    stream.readInt()
+                    hprof.addFrameRoot(threadSerial, objectId)
                 }
                 0x04 -> {
                     stream.readIdentifier()
@@ -115,9 +119,11 @@ class HprofReader(inputStream: InputStream) {
                     stream.readIdentifier()
                 }
                 0x08 -> {
-                    stream.readIdentifier()
+                    // ROOT THREAD OBJECT: thread object id, thread serial number, stack trace serial number
+                    val threadObjectId = stream.readIdentifier()
+                    val threadSerial = stream.readInt()
                     stream.readInt()
-                    stream.readInt()
+                    hprof.addThreadRoot(threadObjectId, threadSerial)
                 }
                 0x20 -> readClassDump(stream)
                 0x21 -> readInstanceDump(stream)

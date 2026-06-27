@@ -1,5 +1,6 @@
 package org.hql.hprof.reader.coroutines
 
+import org.hql.hprof.heap.Identifier
 import org.hql.hprof.heap.instances.Instance
 import org.hql.hprof.heap.instances.coroutines.CoroutineContextInfo
 import org.hql.hprof.heap.instances.coroutines.CoroutineRow
@@ -43,22 +44,27 @@ object CoroutineInstanceMapper : CoroutineMapper {
             }
     }
 
-    private fun Instance.ObjectI?.toCoroutineState(asCoroutine: Boolean): CoroutineState {
-        if (this == null) return CoroutineState.UNKNOWN
-
-        return when (cls.name) {
+    private fun Instance.ObjectI?.toCoroutineState(
+        asCoroutine: Boolean,
+        // Instances already visited while chasing `_prev`. kotlinx's NodeList/JobNode states are
+        // nodes of a *circular* LockFreeLinkedList, so a naive walk loops forever
+        // (StackOverflowError). A revisit means we've gone all the way around the ring without
+        // finding a more specific marker — the job just has a handler list and is still active.
+        seen: MutableSet<Identifier> = mutableSetOf(),
+    ): CoroutineState = when {
+        this == null -> CoroutineState.UNKNOWN
+        !seen.add(id) -> CoroutineState.ACTIVE
+        else -> when (cls.name) {
             "kotlinx.coroutines.ChildContinuation",
             "kotlinx.coroutines.CancellableContinuationImpl" ->
                 if (asCoroutine) CoroutineState.SUSPENDED else CoroutineState.WAITING_CHILDREN
 
             "kotlinx.coroutines.Empty" -> CoroutineState.ACTIVE
 
-            // comment for later removal: надо перепроверять, возможно это не 100% правда
             "kotlinx.coroutines.NodeList",
             $$"kotlinx.coroutines.JobSupport$ChildCompletion",
             "kotlinx.coroutines.ResumeOnCompletion" ->
-                (this["_prev"] as? Instance.ObjectI).toCoroutineState(asCoroutine)
-
+                (this["_prev"] as? Instance.ObjectI).toCoroutineState(asCoroutine, seen)
 
             "kotlinx.coroutines.ChildHandleNode",
             $$"kotlinx.coroutines.JobSupport$Finishing" -> CoroutineState.WAITING_CHILDREN
