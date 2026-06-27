@@ -16,12 +16,12 @@ import org.hql.query.IntCell
 import org.hql.query.Row
 import org.hql.query.StringCell
 import org.hql.query.expressions.BuiltinFunctions
-import org.hql.query.expressions.BuiltinFunctions.requireSingleString
 
 /**
  * Table implementation over coroutine data extracted from a heap dump
  */
 class CoroutineTable(heap: Heap) : Table() {
+    override val name = "coroutines"
 
     override val baseColumns: List<String> = DEFAULT_COLUMNS
 
@@ -56,16 +56,16 @@ class CoroutineTable(heap: Heap) : Table() {
         CacheBuilder.newBuilder().maximumSize(SUBTREE_CACHE_MAX_SIZE).build()
 
     init {
-        BuiltinFunctions.register("descendants_count") { row, _ ->
+        BuiltinFunctions.register("descendants_count") {
             val root = lookupRow(row)
             IntCell(descendantSetOf(root.instance.id.toCompactHex()).size.toLong())
         }
-        BuiltinFunctions.register("is_descendant_of") { row, args ->
-            val rootId = args.requireSingleString("is_descendant_of")
+        BuiltinFunctions.register("is_descendant_of") {
+            val rootId = singleStringArgument()
             BooleanCell(lookupRow(row) in descendantSetOf(rootId))
         }
-        BuiltinFunctions.register("is_sibling_of") { row, args ->
-            val rootId = args.requireSingleString("is_sibling_of")
+        BuiltinFunctions.register("is_sibling_of") {
+            val rootId = singleStringArgument()
             BooleanCell(lookupRow(row) in siblingSetOf(rootId))
         }
         // coroutine-level: the job is suspended at a suspension point

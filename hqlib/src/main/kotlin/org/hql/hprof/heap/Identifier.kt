@@ -12,10 +12,7 @@ class Identifier(private val value: ByteArray): Comparable<Identifier> {
         return 0
     }
 
-    override fun hashCode(): Int {
-        return (value[0] * (1 shl 24) + value[1] * (1 shl 16) + value[2] * (1 shl 8) + value[3]) +
-                (value[4] * (1 shl 24) + value[5] * (1 shl 16) + value[6] * (1 shl 8) + value[7])
-    }
+    override fun hashCode(): Int = value.contentHashCode()
 
     fun isNull() = value.all { it == 0.toByte() }
 

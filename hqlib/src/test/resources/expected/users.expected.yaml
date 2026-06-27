@@ -68,3 +68,131 @@ queries:
       User997 | Abc  | 13          
       User998 | Spb  | 20          
       User999 | Abc  | 23          
+
+  - query: "select city, count() from User group by city"
+    expected: |
+      city | count()
+      Spb  | 246    
+      Def  | 231    
+      Abc  | 264    
+      Msk  | 259    
+
+  - query: "select city, count() as count from User group by city having count > 250"
+    expected: |
+      city | count
+      Abc  | 264  
+      Msk  | 259  
+  
+  - query: "select name, age, if(age >= 18, 'adult', 'child') as status from User where name >= 'User990'"
+    expected: |
+      name    | age | status
+      User990 | 19  | adult 
+      User991 | 23  | adult 
+      User992 | 18  | adult 
+      User993 | 16  | child 
+      User994 | 26  | adult 
+      User995 | 18  | adult 
+      User996 | 29  | adult 
+      User997 | 10  | child 
+      User998 | 17  | child 
+      User999 | 20  | adult 
+  
+  - query: "select min(age) as min, max(age) as max, sum(age) as sum, avg(age) as avg from User where name >= 'User990' group by 1"
+    expected: |
+      min  | max  | sum   | avg 
+      10.0 | 29.0 | 196.0 | 19.6
+
+  - query: "select round(avg(age), 2) as a from User group by 1"
+    expected: |
+      a    
+      19.74
+
+  - query: "select round(avg(age), -1) as a from User group by 1"
+    expected: |
+      a   
+      20.0
+
+  - query: "select distinct(length) as d from (select length(name) as length from User) group by 1"
+    expected: |
+      d
+      3
+
+  - query: "select age from User group by age having abs(age - 20) <= 2 order by age"
+    expected: |
+      age
+      18 
+      19 
+      20 
+      21 
+      22 
+
+  - query: "select lower(name) as nname from User where name >= 'User990'"
+    expected: |
+      nname   
+      user990
+      user991
+      user992
+      user993
+      user994
+      user995
+      user996
+      user997
+      user998
+      user999
+
+  - query: "select upper(name) as nname from User where name >= 'User990'"
+    expected: |
+      nname  
+      USER990
+      USER991
+      USER992
+      USER993
+      USER994
+      USER995
+      USER996
+      USER997
+      USER998
+      USER999
+
+  - query: "select reverse(name) as nname from User where name >= 'User990'"
+    expected: |
+      nname  
+      099resU
+      199resU
+      299resU
+      399resU
+      499resU
+      599resU
+      699resU
+      799resU
+      899resU
+      999resU
+
+  - query: "select substr(name, 3, 4) as nname from User where name >= 'User990'"
+    expected: |
+      nname
+      r990 
+      r991 
+      r992 
+      r993 
+      r994 
+      r995 
+      r996 
+      r997 
+      r998 
+      r999 
+  
+  - query: "select name, locate(name, 'er11') as i from User where i >= 0"
+    expected: |
+      name    | i
+      User11  | 2
+      User110 | 2
+      User111 | 2
+      User112 | 2
+      User113 | 2
+      User114 | 2
+      User115 | 2
+      User116 | 2
+      User117 | 2
+      User118 | 2
+      User119 | 2

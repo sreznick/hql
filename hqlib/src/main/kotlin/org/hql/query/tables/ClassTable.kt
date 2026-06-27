@@ -10,6 +10,8 @@ import org.hql.query.rows.ClassRow
 class ClassTable(
     private val cls: Class
 ) : Table() {
+    override val name = cls.name
+
     override val baseColumns: List<String>
         get() = cls.instanceFieldTypes.keys.toList()
 

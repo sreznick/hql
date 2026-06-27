@@ -20,7 +20,7 @@ object TablePrinter {
     ) {
         if (columns.isEmpty()) return
 
-        val rendered = rows.map { row -> row.map { it.formatForCell() } }
+        val rendered = rows.map { row -> row.map { it.toString() } }
         val widths = columns.indices.map { i ->
             val maxRowWidth = rendered.maxOfOrNull { it[i].length } ?: MIN_COLUMN_WIDTH
             max(columns[i].length, maxRowWidth)
@@ -30,16 +30,5 @@ object TablePrinter {
         for (row in rendered) {
             out.appendLine(row.indices.joinToString(" | ") { i -> row[i].padEnd(widths[i]) })
         }
-    }
-
-    /**
-     * Cell rendering tuned for tables: strings without surrounding quotes,
-     * heap objects as their class name, and null as a dash placeholder
-     */
-    private fun Cell.formatForCell(): String = when (this) {
-        is NullCell -> "-"
-        is StringCell -> value
-        is ObjectCell -> obj.cls.name
-        else -> toString()
     }
 }

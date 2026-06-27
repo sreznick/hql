@@ -1,0 +1,46 @@
+queries:
+  - query: "select * from Class"
+    expected: |
+      name 
+      -    
+      -    
+      -    
+       szs 
+       uwy 
+      -    
+       pqf 
+       dmb 
+      -    
+       pdw
+
+  - query: "select * from Class where !isnull(name)"
+    expected: |
+      name 
+       szs 
+       uwy 
+       pqf 
+       dmb 
+       pdw 
+
+  - query: "select ifnull(name, 'NULL') as name from Class"
+    expected: |
+      name 
+      NULL 
+      NULL 
+      NULL 
+       szs 
+       uwy 
+      NULL 
+       pqf 
+       dmb 
+      NULL 
+       pdw 
+
+  - query: "select trim(name) as nname from Class where !isnull(name)"
+    expected: |
+      nname
+      szs  
+      uwy  
+      pqf  
+      dmb  
+      pdw

@@ -7,19 +7,21 @@ root : selectQuery EOF ;
 
 // Правило для SELECT: ключевое слово + какие столбцы + ключевое слово + имя класса
 // + опциональные условия where и limit
-selectQuery : SELECT columns FROM target=table additionalClause*;
+selectQuery : SELECT columns FROM target=table additionalClause* ;
 
-columns : STAR | columnList;
+columns : STAR | columnList ;
 
 columnList : column (',' column)* ;
 
 column : expression (AS name=IDENTIFIER)? ;
 
-table : className | '(' selectQuery ')' ;
+table : (className | '(' selectQuery ')') (AS name=IDENTIFIER)? joinClause? ;
+
+joinClause : (INNER | LEFT (OUTER)? | RIGHT (OUTER)? | FULL (OUTER)?)? JOIN right=table ON expr=expression ;
 
 className : IDENTIFIER ('.' IDENTIFIER)* ;
 
-additionalClause: whereClause | limitClause | offsetClause | orderClause;
+additionalClause: whereClause | limitClause | offsetClause | orderClause | groupClause | havingClause;
 
 whereClause : WHERE expression ;
 
@@ -33,6 +35,10 @@ orderList : orderElement (',' orderElement)* ;
 
 orderElement : expression (ASC | DESC)? ;
 
+groupClause : (GROUP BY | GROUPBY) columnList ;
+
+havingClause : HAVING expression ;
+
 expression
     : '(' expression ')'                             # ParenExpr
     | left=expression op=ACCESS right=IDENTIFIER     # AccessExpr
@@ -44,6 +50,7 @@ expression
 
     | left=expression op=AND right=expression        # AndExpr
     | left=expression op=OR right=expression         # OrExpr
+    | op=NOT expr=expression                         # NotExpr
 
     | name=IDENTIFIER '(' args=argList? ')'          # FunctionCallExpr
     | BOOL_LITERAL                                   # BoolLiteralExpr
@@ -62,17 +69,27 @@ operator : OP_EQ | OP_GT | OP_LT | OP_GE | OP_LE | OP_NEQ ;
 
 // === ПРАВИЛА ЛЕКСЕРА (Слова) ===
 
-SELECT : 'SELECT' | 'select' ;
-FROM   : 'FROM'   | 'from' ;
-WHERE  : 'WHERE'  | 'where' ;
-LIMIT  : 'LIMIT'  | 'limit' ;
-AS     : 'AS'     | 'as' ;
-OFFSET : 'OFFSET' | 'offset' ;
-ORDER : 'ORDER' | 'order' ;
-BY    : 'BY'    | 'by' ;
+SELECT  : 'SELECT'  | 'select'  ;
+FROM    : 'FROM'    | 'from'    ;
+WHERE   : 'WHERE'   | 'where'   ;
+LIMIT   : 'LIMIT'   | 'limit'   ;
+AS      : 'AS'      | 'as'      ;
+OFFSET  : 'OFFSET'  | 'offset'  ;
+ORDER   : 'ORDER'   | 'order'   ;
+BY      : 'BY'      | 'by'      ;
 ORDERBY : 'ORDERBY' | 'orderby' ;
-ASC    : 'ASC'    | 'asc' ;
-DESC   : 'DESC'   | 'desc' ;
+ASC     : 'ASC'     | 'asc'     ;
+DESC    : 'DESC'    | 'desc'    ;
+GROUP   : 'GROUP'   | 'group'   ;
+GROUPBY : 'GROUPBY' | 'groupby' ;
+HAVING  : 'HAVING'  | 'having'  ;
+JOIN    : 'JOIN'    | 'join'    ;
+INNER   : 'INNER'   | 'inner'   ;
+OUTER   : 'OUTER'   | 'outer'   ;
+LEFT    : 'LEFT'    | 'left'    ;
+RIGHT   : 'RIGHT'   | 'right'   ;
+FULL    : 'FULL'    | 'full'    ;
+ON      : 'ON'      | 'on'      ;
 
 PLUS : '+';
 MINUS : '-';
@@ -81,6 +98,7 @@ ACCESS : '.';
 
 AND : 'AND' | 'and' | '&&';
 OR  : 'OR'  | 'or'  | '||';
+NOT : 'NOT' | 'not' | '!';
 STAR  : '*' ;
 
 // Операторы

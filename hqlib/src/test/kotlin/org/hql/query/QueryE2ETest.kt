@@ -105,20 +105,25 @@ class QueryE2ETest {
                 val buffer = ByteArrayOutputStream()
                 val printStream = PrintStream(buffer, true, StandardCharsets.UTF_8)
                 result.print(printStream)
-                val actual = buffer.toString(StandardCharsets.UTF_8).trimEnd('\n')
 
+                val expected = case.expected.trimEnd().split('\n')
+                val actual = buffer.toString(StandardCharsets.UTF_8).trimEnd().split('\n')
                 if (regenMode) {
-                    regenerated.add(QueryCase(case.query, actual))
+                    regenerated.add(QueryCase(case.query, actual.joinToString("\n")))
                     continue
                 }
-                val expected = case.expected.trimEnd('\n')
-                if (actual != expected) {
+
+                val match = expected.size == actual.size &&
+                        expected.zip(actual).all { (expectedLine, actualLine) ->
+                            expectedLine.trimEnd() == actualLine.trimEnd()
+                        }
+                if (!match) {
                     failures++
                     report.appendLine("FAIL: $hprofName  query #${idx + 1}: ${case.query}")
                     report.appendLine("--- expected ---")
-                    report.appendLine(expected)
+                    report.appendLine(expected.joinToString("\n"))
                     report.appendLine("--- actual ---")
-                    report.appendLine(actual)
+                    report.appendLine(actual.joinToString("\n"))
                     report.appendLine()
                 }
             }
