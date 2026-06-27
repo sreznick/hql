@@ -74,7 +74,7 @@ class ExternalProcessTest {
             // Принудительно гасим дочерний процесс при сбое инициализации на этапе подготовки
             if (targetProcess.isAlive) {
                 targetProcess.destroyForcibly()
-                println("Initialization failed! External process was forcibly killed.")
+                println("Initialization failed! External process was forcibly killed. Reason: ${e.message}")
             }
             throw e
         }
@@ -127,14 +127,6 @@ class ExternalProcessTest {
         // 4. Проверяем закон математики (Инвариант)
         assertEquals(totalCount, longCount + shortCount, "Math failed: $totalCount != $longCount + $shortCount")
         */
-    }
-
-    @Test
-    @Disabled("TODO: Implement launching a real application (e.g., Gradle Daemon) and capturing its dump")
-    fun `testRealApplication_GradleDaemonMemoryDump`() {
-        // Шаблон интеграционного теста для проверки интеграции с запущенным Gradle Daemon
-        // Здесь будет запуск ProcessBuilder("gradlew", "--daemon")
-        // и поиск его PID через ProcessBuilder("jcmd", "-l")
     }
 
     @Test
