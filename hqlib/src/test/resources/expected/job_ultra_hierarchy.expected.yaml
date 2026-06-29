@@ -18,6 +18,11 @@ queries:
     \ | \"mom\"     | 0                  \n70661c360 | \"child\"   | 0           \
     \       \n703246f30 | -         | 5                  \n703247ad8 | -         |\
     \ 3                  \n703247b10 | -         | 1                  "
+- query: "select id, name, depth() from coroutines"
+  expected: "id        | name      | depth()\n706447b28 | \"root\"    | 0      \n\
+    703248020 | \"grandma\" | 2      \n70325c2c8 | \"mom\"     | 3      \n70661c360\
+    \ | \"child\"   | 4      \n703246f30 | -         | 1      \n703247ad8 | -    \
+    \     | 2      \n703247b10 | -         | 3      "
 - query: "select id, name, descendants_count() as dcount from coroutines"
   expected: "id        | name      | dcount\n706447b28 | \"root\"    | 6     \n703248020\
     \ | \"grandma\" | 0     \n70325c2c8 | \"mom\"     | 0     \n70661c360 | \"child\"\
