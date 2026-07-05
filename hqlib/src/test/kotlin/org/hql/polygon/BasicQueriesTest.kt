@@ -16,6 +16,7 @@ import java.nio.charset.StandardCharsets
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Интеграционные тесты для проверки базового синтаксиса HQL (проекция колонок, фильтрация, сортировка, лимиты).
@@ -23,6 +24,8 @@ import kotlin.io.path.inputStream
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class BasicQueriesTest {
+
+    private val log = KotlinLogging.logger {}
 
     // Ленивая загрузка базы данных HQL на основе полученного снимка памяти
     private val database: Database by lazy {
@@ -133,6 +136,6 @@ class BasicQueriesTest {
 
     @AfterAll
     fun cleanup() {
-        println("Polygon tests completed. Memory is ready to be freed.")
+        log.info { "Polygon tests completed. Memory is ready to be freed." }
     }
 }

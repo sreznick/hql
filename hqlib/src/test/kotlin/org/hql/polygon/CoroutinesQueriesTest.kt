@@ -11,6 +11,7 @@ import org.junit.jupiter.api.TestInstance
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
+import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 
 /**
  * Тесты для проверки запросов к таблицам состояний корутин.
@@ -26,6 +27,13 @@ class CoroutinesQueriesTest {
         val hprofPath = runner.runAndDump(CoroutinesScenario()).getOrThrow()
 
         Database(Heap(HprofReader(hprofPath.inputStream()).getHprof()))
+    }
+
+    @Test
+    fun `testSanity - should load coroutines dump without throwing`() {
+        assertDoesNotThrow {
+            database.query("SELECT * FROM java.lang.String LIMIT 1")
+        }
     }
 
     @Test

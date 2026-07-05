@@ -8,11 +8,13 @@ import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeAll
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.TestInstance
+import org.junit.jupiter.api.Disabled
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
 import kotlin.streams.asSequence
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Полигон для тестирования парсера на дампах реальных популярных приложений.
@@ -21,6 +23,8 @@ import kotlin.streams.asSequence
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class RealApplicationsDumpTest {
+
+    private val log = KotlinLogging.logger {}
 
     private lateinit var dumpsDir: Path
 
@@ -33,31 +37,37 @@ class RealApplicationsDumpTest {
     fun `testRealApplication - Gradle Daemon memory parsing`() {
         val hprofPath = dumpsDir.resolve("gradle_daemon.hprof")
 
-        // Если дампа еще нет - пытаемся найти живой процесс Gradle и снять его
         if (!hprofPath.exists()) {
+            // Собираем цепочку PIDs от текущего процесса вверх по дереву родителей
+            // (Test Executor -> Gradle Worker -> Gradle Daemon), используя generateSequence
+            val myAncestors = generateSequence(ProcessHandle.current()) { it.parent().orElse(null) }
+                .map { it.pid() }
+                .toSet()
+
             val gradleProcess = ProcessHandle.allProcesses()
                 .asSequence()
-                .firstOrNull { process ->
-                    process.info().commandLine().orElse("").contains("GradleDaemon")
+                .filter { process ->
+                    val cmd = process.info().commandLine().orElse("")
+                    // Ищем GradleDaemon, но исключаем текущий процесс и всю ветку своих родителей.
+                    cmd.contains("GradleDaemon") && process.pid() !in myAncestors
                 }
+                .firstOrNull()
 
             if (gradleProcess == null) {
-                println("WARN: Gradle Daemon process not found and no cached dump exists. Skipping test.")
+                log.warn { "WARN: No independent Gradle Daemon found (only active build daemon running). Skipping live dump to prevent STW deadlock." }
                 return
             }
 
             val pid = gradleProcess.pid()
-            println("Found Gradle Daemon (PID: $pid). Capturing dump (may take time)...")
+            log.info { "Found independent Gradle Daemon (PID: $pid). Capturing dump (may take time)..." }
             ExternalProcessDumper(pid, dumpOnlyLiveObjects = false).dump(hprofPath, overwrite = true).getOrThrow()
         } else {
-            println("Using cached Gradle Daemon dump: $hprofPath")
+            log.info { "Using cached Gradle Daemon dump: $hprofPath" }
         }
 
-        // Загружаем гигантский дамп в HQL Database
-        println("Parsing Gradle Heap...")
+        log.info { "Parsing Gradle Heap..." }
         val database = Database(Heap(HprofReader(hprofPath.inputStream()).getHprof()))
 
-        // Краш-тесты: парсер не должен упасть при обращении к базовым таблицам
         assertDoesNotThrow {
             database.query("SELECT * FROM java.lang.String LIMIT 50")
         }
@@ -66,7 +76,7 @@ class RealApplicationsDumpTest {
             database.query("SELECT * FROM java.lang.Thread LIMIT 5")
         }
 
-        println("Gradle Daemon dump parsed successfully!")
+        log.info { "Gradle Daemon dump parsed successfully!" }
     }
 
     @Test
@@ -82,7 +92,7 @@ class RealApplicationsDumpTest {
                 val jshellName = if (isWindows) "jshell.exe" else "jshell"
                 val jshellBin = Path.of(javaHome, "bin", jshellName).toString()
 
-                println("Starting JShell to capture its memory...")
+                log.info { "Starting JShell to capture its memory..." }
                 jshellProcess = ProcessBuilder(jshellBin).redirectErrorStream(true).start()
 
                 val pid = jshellProcess.pid()
@@ -91,7 +101,7 @@ class RealApplicationsDumpTest {
 
                 ExternalProcessDumper(pid, dumpOnlyLiveObjects = false).dump(hprofPath, overwrite = true).getOrThrow()
             } else {
-                println("Using cached JShell dump: $hprofPath")
+                log.info { "Using cached JShell dump: $hprofPath" }
             }
 
             val database = Database(Heap(HprofReader(hprofPath.inputStream()).getHprof()))
@@ -101,13 +111,13 @@ class RealApplicationsDumpTest {
                 database.query("SELECT * FROM java.lang.Class LIMIT 20")
             }
 
-            println("JShell dump parsed successfully!")
+            log.info { "JShell dump parsed successfully!" }
 
         } catch (e: Throwable) {
             // Принудительно гасим дочерний процесс при сбое инициализации на этапе подготовки
             if (jshellProcess?.isAlive == true) {
                 jshellProcess.destroyForcibly()
-                println("Initialization failed! JShell process was forcibly killed. Reason: ${e.message}")
+                log.warn { "Initialization failed! JShell process was forcibly killed. Reason: ${e.message}" }
             }
             throw e
         } finally {

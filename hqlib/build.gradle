@@ -19,6 +19,8 @@ dependencies {
     testImplementation 'org.jetbrains.kotlinx:kotlinx-serialization-json:1.10.0'
     testImplementation 'org.jetbrains.kotlinx:kotlinx-coroutines-core:1.7.3'
     testImplementation 'org.junit.jupiter:junit-jupiter-params:5.10.0'
+    testImplementation 'io.github.oshai:kotlin-logging-jvm:7.0.3'
+    testImplementation 'org.slf4j:slf4j-simple:2.0.9'
 
     antlr libs.antlr4 // use ANTLR version 4
 }
@@ -43,4 +45,11 @@ tasks.named('compileKotlin') {
 
 tasks.named('compileTestKotlin') {
     dependsOn tasks.named('generateTestGrammarSource')
+}
+
+test {
+    useJUnitPlatform()
+
+    maxHeapSize = "2g"
+    forkEvery = 1
 }

@@ -15,14 +15,14 @@ class CoroutinesScenario : PolygonScenario {
     @Volatile
     private var isBlockedReady = false
 
-    override fun setupAndWaitForReady() {
+    override fun setupSync() {
         // Корутин №1: Имитирует стандартное приостановленное состояние (Suspended) через delay
         scope.launch(CoroutineName("Suspended-Polygon-1")) {
             delay(10_000_000) // Висит в памяти
         }
 
         // Корутин №2: Имитирует блокировку несущего потока (Carrier Thread) монитором/синхронизацией
-        val lock = Object()
+        val lock = Any()
         scope.launch(CoroutineName("Blocked-Polygon-2")) {
             synchronized(lock) {
                 isBlockedReady = true

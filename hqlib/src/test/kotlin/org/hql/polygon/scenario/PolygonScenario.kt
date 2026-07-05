@@ -7,5 +7,5 @@ package org.hql.polygon.scenario
 interface PolygonScenario : AutoCloseable {
     val scenarioName: String
     /** Выполняет наполнение памяти объектами и блокирует выполнение до их полной инициализации */
-    fun setupAndWaitForReady()
+    fun setupSync()
 }

@@ -12,7 +12,7 @@ class BasicUsersScenario : PolygonScenario {
     // Сохраняем сильные (Strong) ссылки на объекты, чтобы GC не очистил их до снятия дампа
     private val heldUsers = mutableListOf<PolygonUser>()
 
-    override fun setupAndWaitForReady() {
+    override fun setupSync() {
         for (i in 1..100) {
             heldUsers.add(
                 PolygonUser(

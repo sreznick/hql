@@ -4,6 +4,7 @@ import org.hql.hprof.heap.Heap
 import org.hql.hprof.reader.HprofReader
 import org.hql.polygon.dumper.ExternalProcessDumper
 import org.hql.query.Database
+import org.hql.polygon.HeapDumpException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeAll
@@ -14,6 +15,7 @@ import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.exists
 import kotlin.io.path.inputStream
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Полигон для тестирования HQL-движка на дампах с разными настройками JVM.
@@ -22,6 +24,8 @@ import kotlin.io.path.inputStream
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class JvmSettingsDumpTest {
+
+    private val log = KotlinLogging.logger {}
 
     private lateinit var dumpsDir: Path
     private lateinit var javaBin: String
@@ -70,17 +74,17 @@ class JvmSettingsDumpTest {
                 val reader = targetProcess.inputStream.bufferedReader()
                 val line = reader.readLine()
                 if (line != "READY") {
-                    throw IllegalStateException("App failed to start with flags $gcFlag. Output: $line")
+                    throw HeapDumpException("App failed to start with flags $gcFlag. Output: $line")
                 }
 
-                println("App is ready (PID: $pid). Capturing dump...")
+                log.info { "App is ready (PID: $pid). Capturing dump..." }
                 ExternalProcessDumper(pid, dumpOnlyLiveObjects = false).dump(hprofPath, overwrite = true).getOrThrow()
             } else {
-                println("Using cached dump for flags: $gcFlag, $memFlag")
+                log.info { "Using cached dump for flags: $gcFlag, $memFlag" }
             }
 
             // Главная проверка: загружаем дамп с нестандартной структурой кучи
-            println("Parsing dump: ${hprofPath.fileName}...")
+            log.info { "Parsing dump: ${hprofPath.fileName}..." }
             val database = hprofPath.inputStream().use { stream ->
                 Database(Heap(HprofReader(stream).getHprof()))
             }
@@ -90,13 +94,13 @@ class JvmSettingsDumpTest {
                 database.query("SELECT * FROM java.lang.String LIMIT 10")
             }
 
-            println("Successfully parsed dump for $gcFlag!")
+            log.info { "Successfully parsed dump for $gcFlag!" }
 
         } catch (e: Throwable) {
             // Принудительно гасим дочерний процесс при сбое инициализации на этапе подготовки
             if (targetProcess?.isAlive == true) {
                 targetProcess.destroyForcibly()
-                println("Initialization failed! External process was forcibly killed. Reason: ${e.message}")
+                log.warn { "Initialization failed! External process was forcibly killed. Reason: ${e.message}" }
             }
             throw e
         } finally {
@@ -109,6 +113,6 @@ class JvmSettingsDumpTest {
 
     @AfterAll
     fun teardown() {
-        println("All JVM settings tests completed successfully.")
+        log.info { "All JVM settings tests completed successfully." }
     }
 }

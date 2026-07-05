@@ -4,6 +4,7 @@ import org.hql.hprof.heap.Heap
 import org.hql.hprof.reader.HprofReader
 import org.hql.polygon.dumper.ExternalProcessDumper
 import org.hql.query.Database
+import org.hql.polygon.HeapDumpException
 import org.junit.jupiter.api.AfterAll
 import org.junit.jupiter.api.Assertions.assertDoesNotThrow
 import org.junit.jupiter.api.BeforeAll
@@ -15,6 +16,7 @@ import java.io.InputStreamReader
 import java.nio.file.Path
 import kotlin.io.path.createDirectories
 import kotlin.io.path.inputStream
+import io.github.oshai.kotlinlogging.KotlinLogging
 
 /**
  * Интеграционные тесты для проверки анализа реальных, внепроцессных дампов памяти JVM.
@@ -22,6 +24,8 @@ import kotlin.io.path.inputStream
  */
 @TestInstance(TestInstance.Lifecycle.PER_CLASS)
 class ExternalProcessTest {
+
+    private val log = KotlinLogging.logger {}
 
     private lateinit var targetProcess: Process
     private lateinit var hprofPath: Path
@@ -44,7 +48,7 @@ class ExternalProcessTest {
         ).start()
 
         val pid = targetProcess.pid()
-        println("External process started. PID: $pid")
+        log.info { "External process started. PID: $pid" }
 
         // Резервный хук на случай аварийного закрытия тестового окружения (предотвращает появление зомби-процессов в ОС)
         Runtime.getRuntime().addShutdownHook(Thread {
@@ -58,23 +62,23 @@ class ExternalProcessTest {
             val reader = targetProcess.inputStream.bufferedReader()
             val line = reader.readLine()
             if (line != "READY") {
-                throw IllegalStateException("The external process failed to start. Output: $line")
+                throw HeapDumpException("The external process failed to start. Output: $line")
             }
 
-            println("The process is ready. Let's dump it using jcmd...")
+            log.info { "The process is ready. Let's dump it using jcmd..." }
             val dumper = ExternalProcessDumper(pid, dumpOnlyLiveObjects = false)
 
             dumper.dump(hprofPath, overwrite = true).getOrThrow()
-            println("Dump saved successfully: $hprofPath")
+            log.info { "Dump saved successfully: $hprofPath" }
 
-            println("Parsing dump in HQL Database....")
+            log.info { "Parsing dump in HQL Database...." }
             database = Database(Heap(HprofReader(hprofPath.inputStream()).getHprof()))
 
         } catch (e: Throwable) {
             // Принудительно гасим дочерний процесс при сбое инициализации на этапе подготовки
             if (targetProcess.isAlive) {
                 targetProcess.destroyForcibly()
-                println("Initialization failed! External process was forcibly killed. Reason: ${e.message}")
+                log.warn { "Initialization failed! External process was forcibly killed. Reason: ${e.message}" }
             }
             throw e
         }
@@ -131,7 +135,7 @@ class ExternalProcessTest {
 
     @Test
     @Disabled("TODO: Enable after PR #26. Invariant: the sum of object sizes must not exceed total heap size")
-    fun `testInvariant_ObjectsSizeShouldNotExceedTotalHeapSize`() {
+    fun testInvariant_ObjectsSizeShouldNotExceedTotalHeapSize() {
         /*
         // Проверка физического инварианта: сумма байт всех объектов в БД HQL не может превышать физический размер кучи
 
@@ -151,7 +155,7 @@ class ExternalProcessTest {
         // Принудительно завершаем дочерний процесс после завершения всех тестов в классе во избежание утечки системных ресурсов
         if (::targetProcess.isInitialized) {
             targetProcess.destroy()
-            println("External process (PID: ${targetProcess.pid()}) terminated.")
+            log.info { "External process (PID: ${targetProcess.pid()}) terminated." }
         }
     }
 }
