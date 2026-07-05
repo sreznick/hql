@@ -4,6 +4,7 @@ import org.hql.hprof.heap.Heap
 import org.hql.query.ast.DataSource
 import org.hql.query.ast.QueryAST
 import org.hql.query.tables.CoroutineTable
+import org.hql.query.tables.ThreadTable
 import org.hql.query.tables.ClassTable
 import org.hql.query.tables.Table
 
@@ -13,6 +14,7 @@ class Database(val heap: Heap) {
     fun getTable(name: String): Table = tables.getOrPut(name) {
         when (name) {
             "coroutines" -> CoroutineTable(heap)
+            "threads" -> ThreadTable(heap)
             else -> ClassTable(heap.getClassByName(name))
         }
     }

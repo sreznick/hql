@@ -7,13 +7,18 @@ import org.hql.query.Cell
 import org.hql.query.NullCell
 import org.hql.query.Row
 import org.hql.query.StringCell
+import org.hql.hprof.heap.instances.threads.ThreadRow
 
 data class CoroutineRow(
     val instance: Instance.ObjectI,
     val type: CoroutineType,
     val state: CoroutineState,
     val parent: CoroutineRow?,
-    val contextInfo: CoroutineContextInfo
+    val contextInfo: CoroutineContextInfo,
+    // The live thread currently executing this coroutine, or null when it is suspended (on no
+    // thread). Populated by the table after correlating frame roots; carries the JVM-level state
+    // (e.g. BLOCKED on a monitor) that the coroutine's own state cannot express.
+    val carrierThread: ThreadRow? = null
 ) : Row {
     override fun get(column: String): Cell =
         when (column) {
@@ -24,6 +29,12 @@ data class CoroutineRow(
 
             "dispatcher" -> contextInfo.dispatcher.toCell
             "name" -> contextInfo.name.toCell
+
+            // carrier thread of a running coroutine; all null for a suspended one (on no thread)
+            "thread" -> carrierThread?.let { it.name ?: it.instance.id.toCompactHex() }.toCell
+            // thread's heap id, matching the `id` column of the threads table
+            "thread_id" -> carrierThread?.instance?.id?.toCompactHex().toCell
+            "thread_state" -> carrierThread?.state.toCell
 
             else -> {
                 // Support nested access to parent coroutine fields using "parent.<field>" syntax

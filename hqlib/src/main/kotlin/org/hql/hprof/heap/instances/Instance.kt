@@ -8,9 +8,19 @@ import org.hql.hprof.reader.Hprof
 import org.hql.hprof.reader.InstanceInternal
 
 sealed class Instance {
+    // Typed-value accessors. Default to null for instances that don't carry the requested type;
+    // the subclasses that do override the relevant one. Lets callers read a field as a primitive
+    // without matching on the concrete Instance subtype.
+    open fun asString(): String? = null
+    open fun asBoolean(): Boolean? = null
+    open fun asInt(): Int? = null
+    open fun asLong(): Long? = null
+
     data object NullI : Instance()
 
-    data class BooleanI(val v: Boolean) : Instance()
+    data class BooleanI(val v: Boolean) : Instance() {
+        override fun asBoolean() = v
+    }
 
     data class CharI(val v: Char) : Instance()
 
@@ -18,19 +28,29 @@ sealed class Instance {
 
     data class DoubleI(val v: Double) : Instance()
 
-    data class ByteI(val v: Byte) : Instance()
+    data class ByteI(val v: Byte) : Instance() {
+        override fun asInt() = v.toInt()
+    }
 
-    data class ShortI(val v: Short) : Instance()
+    data class ShortI(val v: Short) : Instance() {
+        override fun asInt() = v.toInt()
+    }
 
-    data class IntI(val v: Int) : Instance()
+    data class IntI(val v: Int) : Instance() {
+        override fun asInt() = v
+        override fun asLong() = v.toLong()
+    }
 
-    data class LongI(val v: Long) : Instance()
+    data class LongI(val v: Long) : Instance() {
+        override fun asLong() = v
+    }
 
     data class ArrayI(val values: List<Instance>) : Instance() {
         override fun toString() = values.joinToString(prefix = "[", postfix = "]")
     }
 
     data class StringI(val value: String) : Instance() {
+        override fun asString() = value
         override fun toString() = "\"$value\""
     }
 
@@ -56,7 +76,6 @@ sealed class Instance {
     }
 
     companion object {
-        private val cache = mutableMapOf<Identifier, Instance>()
         private fun convertObject(hprof: Hprof, inst: InstanceInternal.Object): Instance {
             val className = hprof.getClassName(inst.classId)
             return when (className) {
@@ -76,7 +95,7 @@ sealed class Instance {
 
         internal fun createObject(hprof: Hprof, id: Identifier): Instance {
             if (id.isNull()) return NullI
-            return cache.getOrPut(id) {
+            return hprof.instanceCache.getOrPut(id) {
                 val inst = hprof.getInstanceById(id)
                 when (inst) {
                     is InstanceInternal.ObjectArray ->

@@ -1,0 +1,55 @@
+queries:
+- query: "select * from threads"
+  expected: "id        | name                       | state         | daemon | priority\
+    \ | tid | class                                                  \n703a56df8 |\
+    \ main                       | TIMED_WAITING | false  | 5        | 1   | java.lang.Thread\
+    \                                       \n703a5a7a0 | Reference Handler      \
+    \    | RUNNABLE      | true   | 10       | 2   | java.lang.ref.Reference$ReferenceHandler\
+    \               \n703a5ac30 | Finalizer                  | WAITING       | true\
+    \   | 8        | 3   | java.lang.ref.Finalizer$FinalizerThread               \
+    \ \n703a7cec8 | Signal Dispatcher          | RUNNABLE      | true   | 9      \
+    \  | 4   | java.lang.Thread                                       \n703a7d0a8\
+    \ | Attach Listener            | RUNNABLE      | true   | 5        | 5   | java.lang.Thread\
+    \                                       \n703ac74c8 | Notification Thread    \
+    \    | RUNNABLE      | true   | 9        | 13  | java.lang.Thread            \
+    \                           \n703acad28 | Common-Cleaner             | TIMED_WAITING\
+    \ | true   | 8        | 14  | jdk.internal.misc.InnocuousThread              \
+    \        \n703a289c0 | DefaultDispatcher-worker-1 | TIMED_WAITING | true   | 5\
+    \        | 15  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n703a38fd0\
+    \ | DefaultDispatcher-worker-2 | RUNNABLE      | true   | 5        | 16  | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    7036865a0 | JFR Recorder Thread        | RUNNABLE      | true   | 5        | 17\
+    \  | java.lang.Thread                                       \n7056010d8 | JFR\
+    \ Periodic Tasks         | TIMED_WAITING | true   | 5        | 18  | java.lang.Thread\
+    \                                       "
+- query: "select name, state, daemon, priority, class from threads"
+  expected: "name                       | state         | daemon | priority | class\
+    \                                                  \nmain                    \
+    \   | TIMED_WAITING | false  | 5        | java.lang.Thread                   \
+    \                    \nReference Handler          | RUNNABLE      | true   | 10\
+    \       | java.lang.ref.Reference$ReferenceHandler               \nFinalizer \
+    \                 | WAITING       | true   | 8        | java.lang.ref.Finalizer$FinalizerThread\
+    \                \nSignal Dispatcher          | RUNNABLE      | true   | 9   \
+    \     | java.lang.Thread                                       \nAttach Listener\
+    \            | RUNNABLE      | true   | 5        | java.lang.Thread          \
+    \                             \nNotification Thread        | RUNNABLE      | true\
+    \   | 9        | java.lang.Thread                                       \nCommon-Cleaner\
+    \             | TIMED_WAITING | true   | 8        | jdk.internal.misc.InnocuousThread\
+    \                      \nDefaultDispatcher-worker-1 | TIMED_WAITING | true   |\
+    \ 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\nDefaultDispatcher-worker-2\
+    \ | RUNNABLE      | true   | 5        | kotlinx.coroutines.scheduling.CoroutineScheduler$Worker\n\
+    JFR Recorder Thread        | RUNNABLE      | true   | 5        | java.lang.Thread\
+    \                                       \nJFR Periodic Tasks         | TIMED_WAITING\
+    \ | true   | 5        | java.lang.Thread                                     \
+    \  "
+- query: "select name, state from threads where state = 'RUNNABLE'"
+  expected: "name                       | state   \nReference Handler          | RUNNABLE\n\
+    Signal Dispatcher          | RUNNABLE\nAttach Listener            | RUNNABLE\n\
+    Notification Thread        | RUNNABLE\nDefaultDispatcher-worker-2 | RUNNABLE\n\
+    JFR Recorder Thread        | RUNNABLE"
+- query: "select * from coroutines"
+  expected: "id        | type       | state            | parent    | dispatcher |\
+    \ name       | thread                     | thread_id | thread_state \n703a4c5f0\
+    \ | BLOCKING   | WAITING_CHILDREN | -         | -          | -          | main\
+    \                       | 703a56df8 | TIMED_WAITING\n703a26680 | STANDALONE |\
+    \ ACTIVE           | 703a4c5f0 | DEFAULT    | \"runnable\" | DefaultDispatcher-worker-2\
+    \ | 703a38fd0 | RUNNABLE     "
