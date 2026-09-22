@@ -60,6 +60,9 @@ class CoroutineTable(heap: Heap) : Table() {
             val root = lookupRow(row)
             IntCell(descendantSetOf(root.instance.id.toCompactHex()).size.toLong())
         }
+        BuiltinFunctions.register("depth") { row, _ ->
+            IntCell(depthOf(lookupRow(row)).toLong())
+        }
         BuiltinFunctions.register("is_descendant_of") { row, args ->
             val rootId = args.requireSingleString("is_descendant_of")
             BooleanCell(lookupRow(row) in descendantSetOf(rootId))
@@ -99,6 +102,17 @@ class CoroutineTable(heap: Heap) : Table() {
 
     private val CoroutineRow.siblings: List<CoroutineRow>
         get() = parent?.children?.filter { it !== this }.orEmpty()
+
+    private fun depthOf(node: CoroutineRow): Int {
+        var depth = 0
+        val visited = mutableSetOf(node)
+        var current = node.parent
+        while (current != null && visited.add(current)) {
+            depth++
+            current = current.parent
+        }
+        return depth
+    }
 
     private fun descendants(root: CoroutineRow): List<CoroutineRow> {
         val result = mutableListOf<CoroutineRow>()

@@ -13,6 +13,10 @@ queries:
   expected: "id        | name   | descendants_count()\n703651728 | \"root\" | 0  \
     \                \n703629788 | \"ch1\"  | 0                  \n70363c5b0 | \"\
     ch2\"  | 0                  \n703628b88 | -      | 2                  "
+- query: "select id, name, depth() from coroutines"
+  expected: "id        | name   | depth()\n703651728 | \"root\" | 0      \n703629788\
+    \ | \"ch1\"  | 1      \n70363c5b0 | \"ch2\"  | 1      \n703628b88 | -      | 0\
+    \      "
 - query: "select * from coroutines where is_suspended()"
   expected: "id        | type       | state     | parent    | dispatcher | name  |\
     \ thread | thread_id | thread_state\n703629788 | STANDALONE | SUSPENDED | 703628b88\
